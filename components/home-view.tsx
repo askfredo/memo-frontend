@@ -10,6 +10,25 @@ export function HomeView() {
   const [isListening, setIsListening] = useState(false)
   const [showUtilitiesMenu, setShowUtilitiesMenu] = useState(false)
 
+  const playConfirmationSound = () => {
+    // Crear un sonido de confirmación simple
+    const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+    const oscillator = audioContext.createOscillator();
+    const gainNode = audioContext.createGain();
+    
+    oscillator.connect(gainNode);
+    gainNode.connect(audioContext.destination);
+    
+    oscillator.frequency.value = 800; // Frecuencia del sonido
+    oscillator.type = 'sine';
+    
+    gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+    gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.1);
+    
+    oscillator.start(audioContext.currentTime);
+    oscillator.stop(audioContext.currentTime + 0.1);
+  }
+
   return (
     <div className="h-full flex flex-col items-center justify-center p-4 relative">
       <div className="text-center mb-8">
@@ -19,6 +38,7 @@ export function HomeView() {
 
       <VoiceAssistant
         onStartListening={() => {
+          playConfirmationSound()
           setShowChat(true)
           setIsListening(true)
         }}
