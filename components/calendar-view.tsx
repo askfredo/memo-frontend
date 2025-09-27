@@ -66,9 +66,8 @@ export function CalendarView() {
     
     return events.filter((event) => {
       if (!event.start_datetime) return false;
-      
-      const eventDateStr = event.start_datetime.split('T')[0].split(' ')[0];
-      
+      // FIX: Removido el .split(' ')[0] extra
+      const eventDateStr = event.start_datetime.split('T')[0];
       return eventDateStr === dateStr;
     });
   }
