@@ -1,17 +1,15 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect, useRef } from "react"
 import { VoiceAssistant } from "@/components/voice-assistant"
-import { ChatOverlay } from "@/components/chat-overlay"
 import { UtilitiesMenu } from "@/components/utilities-menu"
+import { api } from "@/lib/api"
 
 export function HomeView() {
-  const [showChat, setShowChat] = useState(false)
   const [isListening, setIsListening] = useState(false)
   const [showUtilitiesMenu, setShowUtilitiesMenu] = useState(false)
 
-  const playConfirmationSound = () => {
-    // Crear un sonido de confirmación simple
+  const playConfirmSound = () => {
     const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
     const oscillator = audioContext.createOscillator();
     const gainNode = audioContext.createGain();
@@ -19,15 +17,57 @@ export function HomeView() {
     oscillator.connect(gainNode);
     gainNode.connect(audioContext.destination);
     
-    oscillator.frequency.value = 800; // Frecuencia del sonido
+    oscillator.frequency.value = 1000;
     oscillator.type = 'sine';
     
     gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
-    gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.1);
+    gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.15);
     
     oscillator.start(audioContext.currentTime);
-    oscillator.stop(audioContext.currentTime + 0.1);
+    oscillator.stop(audioContext.currentTime + 0.15);
   }
+
+  const processVoiceInput = async (text: string) => {
+    try {
+      await api.createNote(text)
+      playConfirmSound()
+    } catch (error) {
+      console.error('Error procesando nota:', error)
+    }
+  }
+
+  useEffect(() => {
+    if (!isListening) return
+
+    const SpeechRecognition = window.SpeechRecognition || (window as any).webkitSpeechRecognition
+    if (!SpeechRecognition) {
+      console.error("Speech Recognition no soportado")
+      setIsListening(false)
+      return
+    }
+
+    const recognition = new SpeechRecognition()
+    recognition.lang = "es-ES"
+    recognition.interimResults = false
+    recognition.continuous = false
+
+    recognition.onresult = (event: any) => {
+      const transcript = event.results[0][0].transcript
+      processVoiceInput(transcript)
+      setIsListening(false)
+    }
+
+    recognition.onerror = (event: any) => {
+      console.error("Error:", event.error)
+      setIsListening(false)
+    }
+
+    recognition.start()
+
+    return () => {
+      recognition.stop()
+    }
+  }, [isListening])
 
   return (
     <div className="h-full flex flex-col items-center justify-center p-4 relative">
@@ -37,27 +77,17 @@ export function HomeView() {
       </div>
 
       <VoiceAssistant
-        onStartListening={() => {
-          playConfirmationSound()
-          setShowChat(true)
-          setIsListening(true)
-        }}
+        onStartListening={() => setIsListening(true)}
         onStopListening={() => setIsListening(false)}
         isListening={isListening}
         onLongPress={() => setShowUtilitiesMenu(true)}
       />
 
-      <div className="mt-8 text-center">
-        <p className="text-gray-400 text-sm">Toca el asistente para comenzar</p>
-        <p className="text-gray-400 text-xs mt-1">Mantén presionado para opciones</p>
-      </div>
-
-      <ChatOverlay
-        isOpen={showChat}
-        onClose={() => setShowChat(false)}
-        isListening={isListening}
-        onStopListening={() => setIsListening(false)}
-      />
+      {isListening && (
+        <div className="mt-8 text-center">
+          <p className="text-blue-400 text-lg font-medium">Escuchando...</p>
+        </div>
+      )}
 
       <UtilitiesMenu isOpen={showUtilitiesMenu} onClose={() => setShowUtilitiesMenu(false)} />
     </div>
