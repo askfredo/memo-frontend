@@ -33,7 +33,7 @@ export function CalendarView() {
     try {
       setLoading(true)
       const startDate = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1)
-      const endDate = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0)
+      const endDate = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1)
       
       const result = await api.getEvents(
         startDate.toISOString(),
