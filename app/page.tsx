@@ -4,10 +4,9 @@ import { useState } from "react"
 import { NotesView } from "@/components/notes-view"
 import { HomeView } from "@/components/home-view"
 import { CalendarView } from "@/components/calendar-view"
-import { FriendsView } from "@/components/friends-view"
 import { BottomNavigation } from "@/components/bottom-navigation"
 
-export type ViewType = "notes" | "home" | "calendar" | "friends"
+export type ViewType = "notes" | "home" | "calendar"
 
 export default function MemoVozApp() {
   const [currentView, setCurrentView] = useState<ViewType>("home")
@@ -20,8 +19,6 @@ export default function MemoVozApp() {
         return <HomeView />
       case "calendar":
         return <CalendarView />
-      case "friends":
-        return <FriendsView />
       default:
         return <HomeView />
     }
