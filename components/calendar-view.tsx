@@ -66,8 +66,11 @@ export function CalendarView() {
     
     return events.filter((event) => {
       if (!event.start_datetime) return false;
-      // FIX: Removido el .split(' ')[0] extra
-      const eventDateStr = event.start_datetime.split('T')[0];
+      
+      // Convertir a fecha local antes de comparar
+      const eventDate = new Date(event.start_datetime);
+      const eventDateStr = `${eventDate.getFullYear()}-${String(eventDate.getMonth() + 1).padStart(2, "0")}-${String(eventDate.getDate()).padStart(2, "0")}`;
+      
       return eventDateStr === dateStr;
     });
   }
