@@ -1,0 +1,424 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MemoVoz - Asistente de Recordatorios</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Roboto', sans-serif;
+            background-color: #202124;
+            color: #e8eaed;
+        }
+        .main-container {
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+        .content-area {
+            flex-grow: 1;
+            overflow: hidden;
+            padding-bottom: 120px; /* Space for assistant button */
+        }
+
+        /* Siri-like Assistant Animation */
+        .assistant-container {
+            position: fixed;
+            bottom: 40px; /* Adjust based on nav bar height */
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 100;
+        }
+        .siri-orb {
+            width: 70px;
+            height: 70px;
+            position: relative;
+            cursor: pointer;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        .siri-orb .wave {
+            position: absolute;
+            border: 2px solid;
+            border-radius: 50%;
+            animation: pulse 4s infinite;
+        }
+        .siri-orb .wave:nth-child(1) { width: 100%; height: 100%; border-color: #8ab4f8; animation-delay: 0s; }
+        .siri-orb .wave:nth-child(2) { width: 100%; height: 100%; border-color: #f28b82; animation-delay: 1s; }
+        .siri-orb .wave:nth-child(3) { width: 100%; height: 100%; border-color: #fdd663; animation-delay: 2s; }
+        .siri-orb .wave:nth-child(4) { width: 100%; height: 100%; border-color: #81c995; animation-delay: 3s; }
+        
+        .siri-orb.listening .wave {
+            animation: listen 1.2s infinite ease-in-out;
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(0.95); opacity: 1; }
+            50% { transform: scale(1.4); opacity: 0; }
+            80% { transform: scale(1.4); opacity: 0; }
+        }
+
+        @keyframes listen {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.2); }
+        }
+        
+        /* Notes Styling & Swipe */
+        .notes-grid {
+            overflow-y: auto;
+        }
+        .note {
+            background-color: #3c4043;
+            touch-action: pan-y; /* Allow vertical scroll */
+            position: relative;
+            transition: transform 0.3s ease, opacity 0.3s ease;
+        }
+        .note.favorite {
+            border-left: 4px solid #fdd663;
+        }
+        .note .fav-star {
+            display: none;
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            color: #fdd663;
+        }
+        .note.favorite .fav-star {
+            display: block;
+        }
+
+        /* Calendar */
+        .calendar-day {
+            transition: background-color 0.2s;
+        }
+        .calendar-day.has-event {
+            background-color: #8ab4f8;
+            color: #202124;
+            font-weight: bold;
+            position: relative;
+        }
+         .calendar-day.selected {
+            background-color: #8ab4f8 !important;
+            color: #202124 !important;
+            border-radius: 50%;
+        }
+
+        /* Chat */
+        .chat-bubble {
+            opacity: 0;
+            transform: translateY(20px);
+            animation: fadeIn 0.5s forwards;
+        }
+        @keyframes fadeIn { to { opacity: 1; transform: translateY(0); } }
+
+    </style>
+</head>
+<body class="overflow-hidden">
+
+    <div class="main-container">
+        <!-- Contenido principal (Notas y Calendario) -->
+        <main class="content-area p-4 md:p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
+            <!-- Columna de Notas -->
+            <section id="notes-section" class="flex flex-col h-full">
+                <h2 class="text-xl font-medium text-gray-400 mb-4 px-2">Notas</h2>
+                <div id="notes-grid" class="space-y-3 pr-2 flex-grow overflow-y-auto">
+                    <!-- Las notas se agregarán aquí -->
+                </div>
+            </section>
+            
+            <!-- Columna de Calendario -->
+            <section id="calendar-section" class="flex-col h-full hidden md:flex">
+                <h2 class="text-xl font-medium text-gray-400 mb-4 px-2">Calendario</h2>
+                <div class="bg-[#2d2e30] p-4 rounded-2xl shadow-lg">
+                    <div id="calendar-header" class="flex justify-between items-center mb-4">
+                        <button id="prev-month" class="p-2 rounded-full hover:bg-gray-700"><i class="fas fa-chevron-left"></i></button>
+                        <h2 id="month-year" class="text-lg font-bold"></h2>
+                        <button id="next-month" class="p-2 rounded-full hover:bg-gray-700"><i class="fas fa-chevron-right"></i></button>
+                    </div>
+                    <div class="grid grid-cols-7 text-center font-semibold text-gray-400 mb-2 text-sm">
+                        <div>D</div><div>L</div><div>M</div><div>M</div><div>J</div><div>V</div><div>S</div>
+                    </div>
+                    <div id="calendar-body" class="grid grid-cols-7 gap-1">
+                        <!-- Días se agregarán aquí -->
+                    </div>
+                </div>
+                <div id="event-details" class="mt-4 bg-[#2d2e30] p-4 rounded-2xl shadow-inner hidden">
+                     <h3 class="font-bold text-md mb-2">Eventos del día:</h3>
+                     <ul id="event-list" class="list-disc list-inside text-blue-300"></ul>
+                </div>
+            </section>
+        </main>
+        
+        <!-- Overlay de Chat -->
+        <div id="chat-overlay" class="fixed inset-0 bg-black/70 backdrop-blur-sm z-40 hidden flex flex-col items-center p-4" onclick="this.classList.add('hidden');">
+             <div class="flex-grow"></div> <!-- Spacer -->
+             <div id="chat-container" class="w-full max-w-2xl space-y-4 mb-4" onclick="event.stopPropagation();">
+                <!-- Burbujas de chat se agregan aquí -->
+             </div>
+             <div id="action-buttons-container" class="hidden flex justify-center gap-4 w-full max-w-2xl mb-24" onclick="event.stopPropagation();">
+                <button id="create-note-btn" class="bg-yellow-500 hover:bg-yellow-600 text-gray-900 font-bold py-2 px-4 rounded-full">Crear Nota</button>
+                <button id="schedule-event-btn" class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded-full">Agendar</button>
+             </div>
+        </div>
+
+        <!-- Asistente y Navegación Inferior -->
+        <footer class="fixed bottom-0 left-0 right-0 z-50">
+            <div class="assistant-container">
+                <div id="assistant-button" class="siri-orb">
+                    <div class="wave"></div><div class="wave"></div><div class="wave"></div><div class="wave"></div>
+                </div>
+            </div>
+            <nav class="bg-[#2d2e30] h-16 flex md:hidden items-center justify-around">
+                <button id="nav-notes" class="p-4 text-blue-400"><i class="fas fa-sticky-note text-2xl"></i></button>
+                <button id="nav-calendar" class="p-4 text-gray-400"><i class="fas fa-calendar-alt text-2xl"></i></button>
+            </nav>
+        </footer>
+    </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    // --- ELEMENTOS UI ---
+    const assistantBtn = document.getElementById('assistant-button');
+    const chatOverlay = document.getElementById('chat-overlay');
+    const chatContainer = document.getElementById('chat-container');
+    const actionButtonsContainer = document.getElementById('action-buttons-container');
+    const createNoteBtn = document.getElementById('create-note-btn');
+    const scheduleEventBtn = document.getElementById('schedule-event-btn');
+    const notesGrid = document.getElementById('notes-grid');
+    const calendarBody = document.getElementById('calendar-body');
+    const monthYearEl = document.getElementById('month-year');
+    const prevMonthBtn = document.getElementById('prev-month');
+    const nextMonthBtn = document.getElementById('next-month');
+    const eventDetailsEl = document.getElementById('event-details');
+    const eventListEl = document.getElementById('event-list');
+    const notesSection = document.getElementById('notes-section');
+    const calendarSection = document.getElementById('calendar-section');
+    const navNotesBtn = document.getElementById('nav-notes');
+    const navCalendarBtn = document.getElementById('nav-calendar');
+
+    // --- ESTADO DE LA APP ---
+    let isListening = false;
+    let currentLLMContext = null;
+    let notes = [
+        { id: 1, content: "Comprar leche y pan.", isFavorite: true },
+        { id: 2, content: "Idea: Usar D3.js.", isFavorite: false },
+        { id: 3, content: "Llamar a mamá el fin de semana.", isFavorite: false },
+    ];
+    let events = [
+        { id: 1, title: "Reunión de equipo", date: new Date(new Date().setDate(new Date().getDate() + 2))},
+        { id: 2, title: "Cita con el dentista", date: new Date(new Date().setDate(new Date().getDate() + 5))},
+    ];
+    let currentDate = new Date();
+
+    // --- WEB SPEECH API ---
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    const recognition = SpeechRecognition ? new SpeechRecognition() : null;
+    if (recognition) {
+        recognition.lang = 'es-ES';
+        recognition.interimResults = false;
+        recognition.continuous = false;
+    } else {
+        console.error("Speech Recognition API no es soportada.");
+    }
+
+    // --- LÓGICA DE ASISTENTE (SIMULADA) ---
+    const processVoiceInput = (text) => {
+        addMessageToChat('user', text);
+        setTimeout(() => {
+            let response;
+            if (currentLLMContext?.type === 'asking_when') {
+                response = `Perfecto, para ${text}. ¿Lo guardo como nota o lo agendo?`;
+                currentLLMContext = { type: 'final_choice', data: `${currentLLMContext.data} (${text})` };
+                actionButtonsContainer.classList.remove('hidden');
+            } else if (text.toLowerCase().includes('recordar') || text.toLowerCase().includes('recuérdame')) {
+                response = "¿Claro! ¿Para cuándo?";
+                currentLLMContext = { type: 'asking_when', data: text };
+            } else {
+                response = "Entendido. ¿Prefieres guardarlo como nota o agendarlo en el calendario?";
+                currentLLMContext = { type: 'final_choice', data: text };
+                actionButtonsContainer.classList.remove('hidden');
+            }
+            addMessageToChat('assistant', response);
+            speak(response);
+        }, 1000);
+    };
+
+    const speak = (text) => {
+        if (!speechSynthesis) return;
+        const utterance = new SpeechSynthesisUtterance(text);
+        utterance.lang = 'es-ES';
+        speechSynthesis.speak(utterance);
+    };
+
+    // --- MANEJO DE VISTAS Y UI ---
+    const addMessageToChat = (sender, text) => {
+        const bubble = document.createElement('div');
+        bubble.className = `p-3 rounded-2xl max-w-xs md:max-w-md chat-bubble ${sender === 'user' ? 'bg-blue-600 ml-auto' : 'bg-[#3c4043]'}`;
+        bubble.textContent = text;
+        chatContainer.appendChild(bubble);
+        chatContainer.scrollTop = chatContainer.scrollHeight;
+    };
+    
+    // --- LÓGICA DE NOTAS ---
+    const renderNotes = () => {
+        notesGrid.innerHTML = '';
+        // Ordenar: favoritas primero
+        notes.sort((a, b) => b.isFavorite - a.isFavorite);
+        notes.forEach(note => {
+            const noteEl = document.createElement('div');
+            noteEl.id = `note-${note.id}`;
+            noteEl.className = 'note p-4 rounded-xl shadow-lg cursor-grab';
+            noteEl.classList.toggle('favorite', note.isFavorite);
+            noteEl.innerHTML = `<p>${note.content}</p><i class="fas fa-star fav-star"></i>`;
+            notesGrid.appendChild(noteEl);
+            addSwipeListeners(noteEl, note);
+        });
+    };
+
+    const addNote = (content) => {
+        notes.push({ id: Date.now(), content, isFavorite: false });
+        renderNotes();
+        chatOverlay.classList.add('hidden');
+    };
+
+    // --- LÓGICA DE SWIPE EN NOTAS ---
+    function addSwipeListeners(noteEl, note) {
+        let touchstartX = 0, isSwiping = false, deltaX = 0;
+
+        noteEl.addEventListener('touchstart', (e) => {
+            touchstartX = e.changedTouches[0].screenX;
+            isSwiping = true;
+            noteEl.style.transition = 'none';
+        }, { passive: true });
+
+        noteEl.addEventListener('touchmove', (e) => {
+            if (!isSwiping) return;
+            deltaX = e.changedTouches[0].screenX - touchstartX;
+            noteEl.style.transform = `translateX(${deltaX}px)`;
+            noteEl.style.opacity = 1 - Math.abs(deltaX) / noteEl.offsetWidth;
+        }, { passive: true });
+
+        noteEl.addEventListener('touchend', () => {
+            if (!isSwiping) return;
+            isSwiping = false;
+            noteEl.style.transition = 'transform 0.3s ease, opacity 0.3s ease';
+            
+            const swipeThreshold = noteEl.offsetWidth * 0.3;
+            if (deltaX < -swipeThreshold) { // Swipe Left: Delete
+                noteEl.style.transform = 'translateX(-100%)';
+                noteEl.style.opacity = '0';
+                setTimeout(() => {
+                    notes = notes.filter(n => n.id !== note.id);
+                    renderNotes();
+                }, 300);
+            } else if (deltaX > swipeThreshold) { // Swipe Right: Favorite
+                note.isFavorite = !note.isFavorite;
+                renderNotes();
+            } else { // Snap back
+                noteEl.style.transform = 'translateX(0)';
+                noteEl.style.opacity = '1';
+            }
+        });
+    }
+    
+    // --- LÓGICA DE CALENDARIO ---
+    const renderCalendar = () => {
+        calendarBody.innerHTML = '';
+        const month = currentDate.getMonth(), year = currentDate.getFullYear();
+        monthYearEl.textContent = `${currentDate.toLocaleString('es-ES', { month: 'long' })} ${year}`;
+        const firstDay = new Date(year, month, 1).getDay();
+        const lastDate = new Date(year, month + 1, 0).getDate();
+
+        for (let i = 0; i < firstDay; i++) calendarBody.innerHTML += '<div></div>';
+
+        for (let i = 1; i <= lastDate; i++) {
+            const dayEl = document.createElement('div');
+            dayEl.textContent = i;
+            dayEl.className = 'calendar-day h-10 flex items-center justify-center rounded-full cursor-pointer hover:bg-gray-600';
+            const dayDate = new Date(year, month, i);
+            const dayEvents = events.filter(e => e.date.toDateString() === dayDate.toDateString());
+
+            if (dayEvents.length > 0) {
+                dayEl.classList.add('has-event');
+                dayEl.addEventListener('click', () => {
+                    document.querySelectorAll('.calendar-day.selected').forEach(d => d.classList.remove('selected'));
+                    dayEl.classList.add('selected');
+                    eventDetailsEl.classList.remove('hidden');
+                    eventListEl.innerHTML = dayEvents.map(e => `<li>${e.title}</li>`).join('');
+                });
+            }
+            if (i === new Date().getDate() && month === new Date().getMonth() && year === new Date().getFullYear()) {
+                dayEl.classList.add('bg-blue-800', 'font-bold');
+            }
+            calendarBody.appendChild(dayEl);
+        }
+    };
+    
+    const addEvent = (title) => {
+        events.push({ id: Date.now(), title, date: new Date(new Date().setDate(new Date().getDate() + 1)) });
+        renderCalendar();
+        chatOverlay.classList.add('hidden');
+        if (window.innerWidth < 768) { // On mobile, switch to calendar view
+            navCalendarBtn.click();
+        }
+    };
+
+    // --- EVENT LISTENERS ---
+    assistantBtn.addEventListener('click', () => {
+        if (!recognition) return;
+        if (isListening) {
+            recognition.stop();
+        } else {
+            chatOverlay.classList.remove('hidden');
+            chatContainer.innerHTML = '';
+            actionButtonsContainer.classList.add('hidden');
+            currentLLMContext = null;
+            addMessageToChat('assistant', 'Hola, ¿en qué puedo ayudarte?');
+            recognition.start();
+        }
+    });
+
+    recognition.onstart = () => { isListening = true; assistantBtn.classList.add('listening'); };
+    recognition.onend = () => { isListening = false; assistantBtn.classList.remove('listening'); };
+    recognition.onresult = (e) => { processVoiceInput(e.results[0][0].transcript); };
+    recognition.onerror = (e) => { console.error('Error de reconocimiento:', e.error); addMessageToChat('assistant', 'Hubo un error al escucharte.'); };
+    
+    createNoteBtn.addEventListener('click', () => { if (currentLLMContext?.type === 'final_choice') addNote(currentLLMContext.data); });
+    scheduleEventBtn.addEventListener('click', () => { if (currentLLMContext?.type === 'final_choice') addEvent(currentLLMContext.data); });
+
+    prevMonthBtn.addEventListener('click', () => { currentDate.setMonth(currentDate.getMonth() - 1); renderCalendar(); });
+    nextMonthBtn.addEventListener('click', () => { currentDate.setMonth(currentDate.getMonth() + 1); renderCalendar(); });
+    
+    // Mobile navigation
+    navNotesBtn.addEventListener('click', () => {
+        notesSection.classList.remove('hidden');
+        calendarSection.classList.add('hidden');
+        navNotesBtn.classList.add('text-blue-400');
+        navNotesBtn.classList.remove('text-gray-400');
+        navCalendarBtn.classList.add('text-gray-400');
+        navCalendarBtn.classList.remove('text-blue-400');
+    });
+     navCalendarBtn.addEventListener('click', () => {
+        notesSection.classList.add('hidden');
+        calendarSection.classList.remove('hidden');
+        navCalendarBtn.classList.add('text-blue-400');
+        navCalendarBtn.classList.remove('text-gray-400');
+        navNotesBtn.classList.add('text-gray-400');
+        navNotesBtn.classList.remove('text-blue-400');
+    });
+
+    // --- INICIALIZACIÓN ---
+    const init = () => {
+        renderNotes();
+        renderCalendar();
+    };
+
+    init();
+});
+</script>
+</body>
+</html>
