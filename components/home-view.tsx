@@ -20,8 +20,7 @@ export function HomeView() {
     oscillator.connect(gainNode);
     gainNode.connect(audioContext.destination);
     
-    // Sonido suave y agradable para nota (do-mi-sol)
-    oscillator.frequency.value = 523; // C5
+    oscillator.frequency.value = 523;
     oscillator.type = 'sine';
     
     gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
@@ -30,13 +29,12 @@ export function HomeView() {
     oscillator.start(audioContext.currentTime);
     oscillator.stop(audioContext.currentTime + 0.3);
 
-    // Segunda nota
     setTimeout(() => {
       const osc2 = audioContext.createOscillator();
       const gain2 = audioContext.createGain();
       osc2.connect(gain2);
       gain2.connect(audioContext.destination);
-      osc2.frequency.value = 659; // E5
+      osc2.frequency.value = 659;
       osc2.type = 'sine';
       gain2.gain.setValueAtTime(0.3, audioContext.currentTime);
       gain2.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.2);
@@ -47,9 +45,7 @@ export function HomeView() {
 
   const playCalendarSound = () => {
     const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
-    
-    // Sonido de confirmación más formal para calendario (sol-do-mi)
-    const frequencies = [784, 523, 659]; // G5, C5, E5
+    const frequencies = [784, 523, 659];
     
     frequencies.forEach((freq, index) => {
       setTimeout(() => {
@@ -75,7 +71,6 @@ export function HomeView() {
     try {
       const result = await api.createNote(text)
       
-      // Determinar el tipo de feedback según la clasificación
       if (result.event || result.classification?.intent === 'calendar_event' || result.classification?.intent === 'reminder') {
         setFeedbackType('calendar')
         playCalendarSound()
@@ -84,7 +79,6 @@ export function HomeView() {
         playNoteSound()
       }
 
-      // Mostrar animación de feedback
       setShowFeedback(true)
       setTimeout(() => {
         setShowFeedback(false)
@@ -129,40 +123,44 @@ export function HomeView() {
   }, [isListening])
 
   return (
-    <div className="h-full flex flex-col items-center justify-center p-4 relative">
-      <div className="text-center mb-8">
+    <div className="h-full flex flex-col relative">
+      {/* Header */}
+      <div className="text-center pt-8 pb-4">
         <h1 className="text-3xl font-bold text-white mb-2">MemoVoz</h1>
         <p className="text-gray-400">Tu asistente de recordatorios</p>
       </div>
 
-      {/* Asistente centrado */}
-      <div className="relative flex items-center justify-center">
-        <VoiceAssistant
-          onStartListening={() => setIsListening(true)}
-          onStopListening={() => setIsListening(false)}
-          isListening={isListening}
-          onLongPress={() => setShowUtilitiesMenu(true)}
-        />
+      {/* Asistente centrado verticalmente */}
+      <div className="flex-1 flex items-center justify-center">
+        <div className="relative">
+          <VoiceAssistant
+            onStartListening={() => setIsListening(true)}
+            onStopListening={() => setIsListening(false)}
+            isListening={isListening}
+            onLongPress={() => setShowUtilitiesMenu(true)}
+          />
 
-        {/* Animación de feedback */}
-        {showFeedback && (
-          <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-            <div className={`animate-ping-scale ${feedbackType === 'note' ? 'text-yellow-400' : 'text-green-400'}`}>
-              {feedbackType === 'note' ? (
-                <StickyNote size={60} strokeWidth={2} />
-              ) : (
-                <Calendar size={60} strokeWidth={2} />
-              )}
+          {/* Animación de feedback */}
+          {showFeedback && (
+            <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+              <div className={`animate-ping-scale ${feedbackType === 'note' ? 'text-yellow-400' : 'text-green-400'}`}>
+                {feedbackType === 'note' ? (
+                  <StickyNote size={60} strokeWidth={2} />
+                ) : (
+                  <Calendar size={60} strokeWidth={2} />
+                )}
+              </div>
             </div>
-          </div>
-        )}
-      </div>
+          )}
 
-      {isListening && (
-        <div className="mt-8 text-center">
-          <p className="text-blue-400 text-lg font-medium">Escuchando...</p>
+          {/* Texto "Escuchando..." */}
+          {isListening && (
+            <div className="absolute -bottom-16 left-1/2 transform -translate-x-1/2 w-max">
+              <p className="text-blue-400 text-lg font-medium">Escuchando...</p>
+            </div>
+          )}
         </div>
-      )}
+      </div>
 
       <UtilitiesMenu isOpen={showUtilitiesMenu} onClose={() => setShowUtilitiesMenu(false)} />
 
