@@ -90,9 +90,17 @@ export function CalendarView() {
     }
   }
 
+  const isAllDayEvent = (datetime: string) => {
+    const date = new Date(datetime);
+    return date.getUTCHours() === 0 && date.getUTCMinutes() === 0;
+  }
+
   const getEventTime = (datetime: string) => {
-    const date = new Date(datetime)
-    return date.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })
+    if (isAllDayEvent(datetime)) {
+      return 'Todo el día';
+    }
+    const date = new Date(datetime);
+    return date.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
   }
 
   return (
@@ -172,7 +180,7 @@ export function CalendarView() {
               ) : (
                 <div className="space-y-3">
                   {selectedDayEvents.map((event) => (
-                    <EventCard key={event.id} event={event} onDelete={handleDeleteEvent} />
+                    <EventCard key={event.id} event={event} onDelete={handleDeleteEvent} getEventTime={getEventTime} />
                   ))}
                 </div>
               )}
@@ -194,6 +202,7 @@ export function CalendarView() {
                 key={event.id} 
                 event={event} 
                 onDelete={handleDeleteEvent}
+                getEventTime={getEventTime}
               />
             ))}
           </div>
@@ -203,13 +212,13 @@ export function CalendarView() {
   )
 }
 
-// Componente para eventos en el modal del día
 interface EventCardProps {
   event: Event;
   onDelete: (eventId: string) => void;
+  getEventTime: (datetime: string) => string;
 }
 
-function EventCard({ event, onDelete }: EventCardProps) {
+function EventCard({ event, onDelete, getEventTime }: EventCardProps) {
   const [touchStart, setTouchStart] = useState<number | null>(null)
   const [touchEnd, setTouchEnd] = useState<number | null>(null)
 
@@ -232,11 +241,6 @@ function EventCard({ event, onDelete }: EventCardProps) {
     if (isLeftSwipe) {
       onDelete(event.id)
     }
-  }
-
-  const getEventTime = (datetime: string) => {
-    const date = new Date(datetime)
-    return date.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })
   }
 
   return (
@@ -263,13 +267,13 @@ function EventCard({ event, onDelete }: EventCardProps) {
   )
 }
 
-// Componente para eventos en "Próximos eventos"
 interface EventItemProps {
   event: Event;
   onDelete: (eventId: string) => void;
+  getEventTime: (datetime: string) => string;
 }
 
-function EventItem({ event, onDelete }: EventItemProps) {
+function EventItem({ event, onDelete, getEventTime }: EventItemProps) {
   const [touchStart, setTouchStart] = useState<number | null>(null)
   const [touchEnd, setTouchEnd] = useState<number | null>(null)
 
@@ -292,11 +296,6 @@ function EventItem({ event, onDelete }: EventItemProps) {
     if (isLeftSwipe) {
       onDelete(event.id)
     }
-  }
-
-  const getEventTime = (datetime: string) => {
-    const date = new Date(datetime)
-    return date.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })
   }
 
   return (
