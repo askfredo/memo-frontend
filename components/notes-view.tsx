@@ -2,7 +2,7 @@
 
 import type React from "react"
 import { useState, useEffect } from "react"
-import { Star, Hash, Plus } from "lucide-react"
+import { Star, Hash } from "lucide-react"
 import { api } from "@/lib/api"
 
 interface Note {
@@ -77,9 +77,6 @@ export function NotesView() {
     <div className="h-full p-4">
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-xl font-medium text-gray-400">Notas</h2>
-        <button className="bg-blue-500 p-2 rounded-full">
-          <Plus size={20} className="text-white" />
-        </button>
       </div>
 
       <div className="mb-4">

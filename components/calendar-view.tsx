@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { ChevronLeft, ChevronRight, Plus, X } from "lucide-react"
+import { ChevronLeft, ChevronRight, X } from "lucide-react"
 import { api } from "@/lib/api"
 
 interface Event {
@@ -99,9 +99,6 @@ export function CalendarView() {
     <div className="h-full p-4 relative">
       <div className="flex items-center justify-between mb-6">
         <h2 className="text-xl font-medium text-gray-400">Calendario</h2>
-        <button className="bg-blue-500 p-2 rounded-full">
-          <Plus size={20} className="text-white" />
-        </button>
       </div>
 
       <div className="flex items-center justify-between mb-4">
