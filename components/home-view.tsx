@@ -2,11 +2,13 @@
 
 import { useState, useEffect } from "react"
 import { VoiceAssistant } from "@/components/voice-assistant"
+import { EmailConfigModal } from "@/components/email-config-modal"
 import { api } from "@/lib/api"
 import { StickyNote, Calendar } from "lucide-react"
 
 export function HomeView() {
   const [isListening, setIsListening] = useState(false)
+  const [showEmailConfig, setShowEmailConfig] = useState(false)
   const [showFeedback, setShowFeedback] = useState(false)
   const [feedbackType, setFeedbackType] = useState<'note' | 'calendar'>('note')
 
@@ -133,6 +135,7 @@ export function HomeView() {
             onStartListening={() => setIsListening(true)}
             onStopListening={() => setIsListening(false)}
             isListening={isListening}
+            onLongPress={() => setShowEmailConfig(true)}
           />
 
           {showFeedback && (
@@ -154,6 +157,11 @@ export function HomeView() {
           )}
         </div>
       </div>
+
+      <EmailConfigModal 
+        isOpen={showEmailConfig} 
+        onClose={() => setShowEmailConfig(false)} 
+      />
 
       <style jsx>{`
         @keyframes ping-scale {

@@ -1,24 +1,61 @@
 "use client"
 
+import { useRef } from "react"
+
 interface VoiceAssistantProps {
   onStartListening: () => void
   onStopListening: () => void
   isListening: boolean
+  onLongPress: () => void
 }
 
-export function VoiceAssistant({ onStartListening, onStopListening, isListening }: VoiceAssistantProps) {
+export function VoiceAssistant({ onStartListening, onStopListening, isListening, onLongPress }: VoiceAssistantProps) {
+  const longPressTimer = useRef<NodeJS.Timeout | null>(null)
+  const isLongPress = useRef(false)
+
   const handleClick = () => {
-    if (isListening) {
-      onStopListening()
-    } else {
-      onStartListening()
+    if (!isLongPress.current) {
+      if (isListening) {
+        onStopListening()
+      } else {
+        onStartListening()
+      }
     }
+    isLongPress.current = false
+  }
+
+  const handleMouseDown = () => {
+    isLongPress.current = false
+    longPressTimer.current = setTimeout(() => {
+      isLongPress.current = true
+      onLongPress()
+    }, 800)
+  }
+
+  const handleMouseUp = () => {
+    if (longPressTimer.current) {
+      clearTimeout(longPressTimer.current)
+      longPressTimer.current = null
+    }
+  }
+
+  const handleMouseLeave = () => {
+    if (longPressTimer.current) {
+      clearTimeout(longPressTimer.current)
+      longPressTimer.current = null
+    }
+    isLongPress.current = false
   }
 
   return (
     <div className="relative">
       <button
         onClick={handleClick}
+        onMouseDown={handleMouseDown}
+        onMouseUp={handleMouseUp}
+        onMouseLeave={handleMouseLeave}
+        onTouchStart={handleMouseDown}
+        onTouchEnd={handleMouseUp}
         className={`siri-orb w-20 h-20 relative cursor-pointer flex justify-center items-center ${
           isListening ? "listening" : ""
         }`}
