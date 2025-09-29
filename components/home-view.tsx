@@ -2,13 +2,11 @@
 
 import { useState, useEffect } from "react"
 import { VoiceAssistant } from "@/components/voice-assistant"
-import { UtilitiesMenu } from "@/components/utilities-menu"
 import { api } from "@/lib/api"
 import { StickyNote, Calendar } from "lucide-react"
 
 export function HomeView() {
   const [isListening, setIsListening] = useState(false)
-  const [showUtilitiesMenu, setShowUtilitiesMenu] = useState(false)
   const [showFeedback, setShowFeedback] = useState(false)
   const [feedbackType, setFeedbackType] = useState<'note' | 'calendar'>('note')
 
@@ -124,23 +122,19 @@ export function HomeView() {
 
   return (
     <div className="h-full flex flex-col relative">
-      {/* Header */}
       <div className="text-center pt-8 pb-4">
         <h1 className="text-3xl font-bold text-white mb-2">MemoVoz</h1>
         <p className="text-gray-400">Tu asistente de recordatorios</p>
       </div>
 
-      {/* Asistente centrado verticalmente */}
       <div className="flex-1 flex items-center justify-center">
         <div className="relative">
           <VoiceAssistant
             onStartListening={() => setIsListening(true)}
             onStopListening={() => setIsListening(false)}
             isListening={isListening}
-            onLongPress={() => setShowUtilitiesMenu(true)}
           />
 
-          {/* Animación de feedback */}
           {showFeedback && (
             <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
               <div className={`animate-ping-scale ${feedbackType === 'note' ? 'text-yellow-400' : 'text-green-400'}`}>
@@ -153,7 +147,6 @@ export function HomeView() {
             </div>
           )}
 
-          {/* Texto "Escuchando..." */}
           {isListening && (
             <div className="absolute -bottom-16 left-1/2 transform -translate-x-1/2 w-max">
               <p className="text-blue-400 text-lg font-medium">Escuchando...</p>
@@ -161,8 +154,6 @@ export function HomeView() {
           )}
         </div>
       </div>
-
-      <UtilitiesMenu isOpen={showUtilitiesMenu} onClose={() => setShowUtilitiesMenu(false)} />
 
       <style jsx>{`
         @keyframes ping-scale {
