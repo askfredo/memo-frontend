@@ -11,7 +11,6 @@ interface Event {
   start_datetime: string
   location?: string
   color: string
-  emoji?: string  // Agregar campo emoji
 }
 
 export function CalendarView() {
@@ -73,41 +72,6 @@ export function CalendarView() {
       
       return eventDateStr === dateStr;
     });
-  }
-
-  // Función mejorada para obtener el emoji del evento
-  const getEventEmoji = (event: Event): string => {
-    // 1. Si tiene campo emoji, usarlo
-    if (event.emoji) return event.emoji;
-    
-    // 2. Intentar extraer emoji del título
-    const emojiMatch = event.title.match(/^[\p{Emoji_Presentation}\p{Emoji}\uFE0F]/u);
-    if (emojiMatch) return emojiMatch[0];
-    
-    // 3. Fallback basado en palabras clave del título
-    const title = event.title.toLowerCase();
-    if (title.includes('cumpleaños') || title.includes('fiesta')) return '🎉';
-    if (title.includes('doctor') || title.includes('médico')) return '🏥';
-    if (title.includes('comida') || title.includes('restaurante')) return '🍽️';
-    if (title.includes('pago') || title.includes('compra')) return '💰';
-    if (title.includes('película') || title.includes('cine')) return '🎬';
-    if (title.includes('gym') || title.includes('ejercicio')) return '🏋️';
-    if (title.includes('trabajo') || title.includes('reunión')) return '💼';
-    if (title.includes('viaje')) return '✈️';
-    if (title.includes('estudio') || title.includes('clase')) return '📚';
-    if (title.includes('misa') || title.includes('iglesia')) return '⛪';
-    
-    // 4. Emoji por defecto más variado basado en el color
-    const colorEmojis: Record<string, string> = {
-      blue: '🔵',
-      red: '🔴',
-      green: '🟢',
-      yellow: '🟡',
-      purple: '🟣',
-      orange: '🟠'
-    };
-    
-    return colorEmojis[event.color] || '💡';
   }
 
   const handleDayClick = (day: number) => {
@@ -187,15 +151,10 @@ export function CalendarView() {
             >
               <span className={`text-sm ${isToday ? "text-white font-bold" : "text-gray-300"}`}>{day}</span>
               {dayEvents.length > 0 && (
-                <div className="flex justify-center mt-1 gap-0.5">
-                  {dayEvents.slice(0, 3).map((event, idx) => (
-                    <span key={event.id} className="text-xs">
-                      {getEventEmoji(event)}
-                    </span>
-                  ))}
-                  {dayEvents.length > 3 && (
-                    <span className="text-xs text-gray-400">+{dayEvents.length - 3}</span>
-                  )}
+                <div className="flex justify-center mt-1">
+                  <span className="text-xs">
+                    {dayEvents[0].title.match(/^[\p{Emoji}]/u)?.[0] || '📅'}
+                  </span>
                 </div>
               )}
             </button>
@@ -221,13 +180,7 @@ export function CalendarView() {
               ) : (
                 <div className="space-y-3">
                   {selectedDayEvents.map((event) => (
-                    <EventCard 
-                      key={event.id} 
-                      event={event} 
-                      onDelete={handleDeleteEvent} 
-                      getEventTime={getEventTime}
-                      getEventEmoji={getEventEmoji}
-                    />
+                    <EventCard key={event.id} event={event} onDelete={handleDeleteEvent} getEventTime={getEventTime} />
                   ))}
                 </div>
               )}
@@ -250,7 +203,6 @@ export function CalendarView() {
                 event={event} 
                 onDelete={handleDeleteEvent}
                 getEventTime={getEventTime}
-                getEventEmoji={getEventEmoji}
               />
             ))}
           </div>
@@ -264,10 +216,9 @@ interface EventCardProps {
   event: Event;
   onDelete: (eventId: string) => void;
   getEventTime: (datetime: string) => string;
-  getEventEmoji: (event: Event) => string;
 }
 
-function EventCard({ event, onDelete, getEventTime, getEventEmoji }: EventCardProps) {
+function EventCard({ event, onDelete, getEventTime }: EventCardProps) {
   const [touchStart, setTouchStart] = useState<number | null>(null)
   const [touchEnd, setTouchEnd] = useState<number | null>(null)
 
@@ -300,18 +251,15 @@ function EventCard({ event, onDelete, getEventTime, getEventEmoji }: EventCardPr
       onTouchEnd={onTouchEnd}
     >
       <div className="flex items-start justify-between mb-2">
-        <div className="flex items-start gap-2 flex-1">
-          <span className="text-2xl">{getEventEmoji(event)}</span>
-          <div className="flex-1">
-            <h4 className="text-white font-medium">{event.title}</h4>
-            {event.description && (
-              <p className="text-gray-400 text-sm mt-1">{event.description}</p>
-            )}
-          </div>
+        <div className="flex-1">
+          <h4 className="text-white font-medium">{event.title}</h4>
+          {event.description && (
+            <p className="text-gray-400 text-sm mt-1">{event.description}</p>
+          )}
         </div>
-        <div className={`w-3 h-3 rounded-full bg-${event.color || 'blue'}-500 ml-3 flex-shrink-0`}></div>
+        <div className={`w-3 h-3 rounded-full bg-${event.color || 'blue'}-500 ml-3`}></div>
       </div>
-      <div className="flex items-center text-gray-400 text-xs space-x-3 ml-10">
+      <div className="flex items-center text-gray-400 text-xs space-x-3">
         <span>🕒 {getEventTime(event.start_datetime)}</span>
         {event.location && <span>📍 {event.location}</span>}
       </div>
@@ -323,10 +271,9 @@ interface EventItemProps {
   event: Event;
   onDelete: (eventId: string) => void;
   getEventTime: (datetime: string) => string;
-  getEventEmoji: (event: Event) => string;
 }
 
-function EventItem({ event, onDelete, getEventTime, getEventEmoji }: EventItemProps) {
+function EventItem({ event, onDelete, getEventTime }: EventItemProps) {
   const [touchStart, setTouchStart] = useState<number | null>(null)
   const [touchEnd, setTouchEnd] = useState<number | null>(null)
 
@@ -358,7 +305,6 @@ function EventItem({ event, onDelete, getEventTime, getEventEmoji }: EventItemPr
       onTouchMove={onTouchMove}
       onTouchEnd={onTouchEnd}
     >
-      <span className="text-lg mr-2">{getEventEmoji(event)}</span>
       <div className={`w-3 h-3 rounded-full bg-${event.color || 'blue'}-500 mr-3`}></div>
       <div className="flex-1">
         <p className="text-white text-sm font-medium">{event.title}</p>
