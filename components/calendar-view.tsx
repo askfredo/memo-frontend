@@ -67,7 +67,6 @@ export function CalendarView() {
     return events.filter((event) => {
       if (!event.start_datetime) return false;
       
-      // Convertir a fecha local antes de comparar
       const eventDate = new Date(event.start_datetime);
       const eventDateStr = `${eventDate.getFullYear()}-${String(eventDate.getMonth() + 1).padStart(2, "0")}-${String(eventDate.getDate()).padStart(2, "0")}`;
       
@@ -79,6 +78,16 @@ export function CalendarView() {
     const dayEvents = getDayEvents(day)
     setSelectedDay(day)
     setSelectedDayEvents(dayEvents)
+  }
+
+  const handleDeleteEvent = async (eventId: string) => {
+    try {
+      await api.deleteEvent(eventId)
+      setEvents(prev => prev.filter(e => e.id !== eventId))
+      setSelectedDayEvents(prev => prev.filter(e => e.id !== eventId))
+    } catch (error) {
+      console.error('Error eliminando evento:', error)
+    }
   }
 
   const getEventTime = (datetime: string) => {
@@ -166,21 +175,7 @@ export function CalendarView() {
               ) : (
                 <div className="space-y-3">
                   {selectedDayEvents.map((event) => (
-                    <div key={event.id} className="bg-[#3c4043] p-4 rounded-lg">
-                      <div className="flex items-start justify-between mb-2">
-                        <div className="flex-1">
-                          <h4 className="text-white font-medium">{event.title}</h4>
-                          {event.description && (
-                            <p className="text-gray-400 text-sm mt-1">{event.description}</p>
-                          )}
-                        </div>
-                        <div className={`w-3 h-3 rounded-full bg-${event.color || 'blue'}-500 ml-3`}></div>
-                      </div>
-                      <div className="flex items-center text-gray-400 text-xs space-x-3">
-                        <span>🕒 {getEventTime(event.start_datetime)}</span>
-                        {event.location && <span>📍 {event.location}</span>}
-                      </div>
-                    </div>
+                    <EventCard key={event.id} event={event} onDelete={handleDeleteEvent} />
                   ))}
                 </div>
               )}
@@ -198,16 +193,126 @@ export function CalendarView() {
         ) : (
           <div className="space-y-2 max-h-40 overflow-y-auto">
             {events.slice(0, 3).map((event) => (
-              <div key={event.id} className="bg-[#3c4043] p-3 rounded-lg flex items-center">
-                <div className={`w-3 h-3 rounded-full bg-${event.color || 'blue'}-500 mr-3`}></div>
-                <div className="flex-1">
-                  <p className="text-white text-sm font-medium">{event.title}</p>
-                  <p className="text-gray-400 text-xs">{getEventTime(event.start_datetime)}</p>
-                </div>
-              </div>
+              <EventItem 
+                key={event.id} 
+                event={event} 
+                onDelete={handleDeleteEvent}
+              />
             ))}
           </div>
         )}
+      </div>
+    </div>
+  )
+}
+
+// Componente para eventos en el modal del día
+interface EventCardProps {
+  event: Event;
+  onDelete: (eventId: string) => void;
+}
+
+function EventCard({ event, onDelete }: EventCardProps) {
+  const [touchStart, setTouchStart] = useState<number | null>(null)
+  const [touchEnd, setTouchEnd] = useState<number | null>(null)
+
+  const minSwipeDistance = 50
+
+  const onTouchStart = (e: React.TouchEvent) => {
+    setTouchEnd(null)
+    setTouchStart(e.targetTouches[0].clientX)
+  }
+
+  const onTouchMove = (e: React.TouchEvent) => {
+    setTouchEnd(e.targetTouches[0].clientX)
+  }
+
+  const onTouchEnd = () => {
+    if (!touchStart || !touchEnd) return
+    const distance = touchStart - touchEnd
+    const isLeftSwipe = distance > minSwipeDistance
+    
+    if (isLeftSwipe) {
+      onDelete(event.id)
+    }
+  }
+
+  const getEventTime = (datetime: string) => {
+    const date = new Date(datetime)
+    return date.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })
+  }
+
+  return (
+    <div 
+      className="bg-[#3c4043] p-4 rounded-lg cursor-grab active:cursor-grabbing"
+      onTouchStart={onTouchStart}
+      onTouchMove={onTouchMove}
+      onTouchEnd={onTouchEnd}
+    >
+      <div className="flex items-start justify-between mb-2">
+        <div className="flex-1">
+          <h4 className="text-white font-medium">{event.title}</h4>
+          {event.description && (
+            <p className="text-gray-400 text-sm mt-1">{event.description}</p>
+          )}
+        </div>
+        <div className={`w-3 h-3 rounded-full bg-${event.color || 'blue'}-500 ml-3`}></div>
+      </div>
+      <div className="flex items-center text-gray-400 text-xs space-x-3">
+        <span>🕒 {getEventTime(event.start_datetime)}</span>
+        {event.location && <span>📍 {event.location}</span>}
+      </div>
+    </div>
+  )
+}
+
+// Componente para eventos en "Próximos eventos"
+interface EventItemProps {
+  event: Event;
+  onDelete: (eventId: string) => void;
+}
+
+function EventItem({ event, onDelete }: EventItemProps) {
+  const [touchStart, setTouchStart] = useState<number | null>(null)
+  const [touchEnd, setTouchEnd] = useState<number | null>(null)
+
+  const minSwipeDistance = 50
+
+  const onTouchStart = (e: React.TouchEvent) => {
+    setTouchEnd(null)
+    setTouchStart(e.targetTouches[0].clientX)
+  }
+
+  const onTouchMove = (e: React.TouchEvent) => {
+    setTouchEnd(e.targetTouches[0].clientX)
+  }
+
+  const onTouchEnd = () => {
+    if (!touchStart || !touchEnd) return
+    const distance = touchStart - touchEnd
+    const isLeftSwipe = distance > minSwipeDistance
+    
+    if (isLeftSwipe) {
+      onDelete(event.id)
+    }
+  }
+
+  const getEventTime = (datetime: string) => {
+    const date = new Date(datetime)
+    return date.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })
+  }
+
+  return (
+    <div 
+      className="bg-[#3c4043] p-3 rounded-lg flex items-center cursor-grab active:cursor-grabbing"
+      onTouchStart={onTouchStart}
+      onTouchMove={onTouchMove}
+      onTouchEnd={onTouchEnd}
+    >
+      <div className={`w-3 h-3 rounded-full bg-${event.color || 'blue'}-500 mr-3`}></div>
+      <div className="flex-1">
+        <p className="text-white text-sm font-medium">{event.title}</p>
+        <p className="text-gray-400 text-xs">{getEventTime(event.start_datetime)}</p>
       </div>
     </div>
   )

@@ -49,49 +49,9 @@ export const api = {
     return response.json();
   },
 
-  // ==================== AMIGOS ====================
-  async getFriends() {
-    const response = await fetch(`${API_URL}/friends`);
-    return response.json();
-  },
-
-  async sendFriendRequest(friendUsername: string) {
-    const response = await fetch(`${API_URL}/friends/request`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ friendUsername })
-    });
-    return response.json();
-  },
-
-  // ==================== INVITACIONES ====================
-  async getInvitations() {
-    const response = await fetch(`${API_URL}/invitations`);
-    return response.json();
-  },
-
-  async respondToInvitation(
-    invitationId: string, 
-    status: 'accepted' | 'declined' | 'maybe',
-    message?: string
-  ) {
-    const response = await fetch(`${API_URL}/invitations/${invitationId}/respond`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ status, message })
-    });
-    return response.json();
-  },
-
-  // ==================== NOTIFICACIONES ====================
-  async getNotifications() {
-    const response = await fetch(`${API_URL}/notifications`);
-    return response.json();
-  },
-
-  async markNotificationAsRead(notificationId: string) {
-    const response = await fetch(`${API_URL}/notifications/${notificationId}/read`, {
-      method: 'PATCH',
+  async deleteEvent(eventId: string) {
+    const response = await fetch(`${API_URL}/calendar/events/${eventId}`, {
+      method: 'DELETE',
     });
     return response.json();
   },
