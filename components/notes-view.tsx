@@ -2,8 +2,9 @@
 
 import type React from "react"
 import { useState, useEffect } from "react"
-import { Star, Hash } from "lucide-react"
+import { Star, Hash, Plus, Edit } from "lucide-react"
 import { api } from "@/lib/api"
+import { NoteEditorModal } from "@/components/note-editor-modal"
 
 interface Note {
   id: string
@@ -11,6 +12,7 @@ interface Note {
   is_favorite: boolean
   hashtags: string[]
   ai_classification?: any
+  image_data?: string
   created_at: string
 }
 
@@ -18,6 +20,8 @@ export function NotesView() {
   const [notes, setNotes] = useState<Note[]>([])
   const [selectedHashtag, setSelectedHashtag] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
+  const [isEditorOpen, setIsEditorOpen] = useState(false)
+  const [editingNote, setEditingNote] = useState<Note | null>(null)
 
   useEffect(() => {
     loadNotes()
@@ -66,6 +70,43 @@ export function NotesView() {
     }
   }
 
+  const handleCreateNote = () => {
+    setEditingNote(null)
+    setIsEditorOpen(true)
+  }
+
+  const handleEditNote = (note: Note) => {
+    setEditingNote(note)
+    setIsEditorOpen(true)
+  }
+
+  const handleSaveNote = async (content: string, hashtags: string[]) => {
+    try {
+      if (editingNote) {
+        // Editar nota existente
+        await api.updateNote(editingNote.id, { content, hashtags })
+        setNotes((prev) =>
+          prev.map((n) =>
+            n.id === editingNote.id ? { ...n, content, hashtags } : n
+          )
+        )
+      } else {
+        // Crear nueva nota
+        const result = await api.createNote(content)
+        if (result.note) {
+          // Actualizar hashtags si es necesario
+          if (hashtags.length > 0) {
+            await api.updateNote(result.note.id, { hashtags })
+            result.note.hashtags = hashtags
+          }
+          setNotes((prev) => [result.note, ...prev])
+        }
+      }
+    } catch (error) {
+      console.error('Error guardando nota:', error)
+    }
+  }
+
   if (loading) {
     return (
       <div className="h-full p-4 flex items-center justify-center">
@@ -75,9 +116,15 @@ export function NotesView() {
   }
 
   return (
-    <div className="h-full p-4">
+    <div className="h-full p-4 pb-20">
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-xl font-medium text-gray-400">Notas</h2>
+        <button
+          onClick={handleCreateNote}
+          className="bg-blue-500 hover:bg-blue-600 text-white p-2 rounded-full transition-colors"
+        >
+          <Plus size={20} />
+        </button>
       </div>
 
       <div className="mb-4">
@@ -111,15 +158,29 @@ export function NotesView() {
       {sortedNotes.length === 0 ? (
         <div className="flex flex-col items-center justify-center h-64 text-gray-500">
           <p>No hay notas todavía</p>
-          <p className="text-sm mt-2">Usa el asistente de voz para crear una</p>
+          <p className="text-sm mt-2">Usa el botón + para crear una</p>
         </div>
       ) : (
         <div className="space-y-3 overflow-y-auto">
           {sortedNotes.map((note) => (
-            <NoteCard key={note.id} note={note} onSwipe={handleSwipe} />
+            <NoteCard 
+              key={note.id} 
+              note={note} 
+              onSwipe={handleSwipe}
+              onEdit={handleEditNote}
+            />
           ))}
         </div>
       )}
+
+      <NoteEditorModal
+        isOpen={isEditorOpen}
+        onClose={() => setIsEditorOpen(false)}
+        onSave={handleSaveNote}
+        initialContent={editingNote?.content || ""}
+        initialHashtags={editingNote?.hashtags || []}
+        title={editingNote ? "Editar Nota" : "Nueva Nota"}
+      />
     </div>
   )
 }
@@ -127,9 +188,10 @@ export function NotesView() {
 interface NoteCardProps {
   note: Note
   onSwipe: (noteId: string, direction: "left" | "right") => void
+  onEdit: (note: Note) => void
 }
 
-function NoteCard({ note, onSwipe }: NoteCardProps) {
+function NoteCard({ note, onSwipe, onEdit }: NoteCardProps) {
   const [touchStart, setTouchStart] = useState<number | null>(null)
   const [touchEnd, setTouchEnd] = useState<number | null>(null)
 
@@ -167,7 +229,6 @@ function NoteCard({ note, onSwipe }: NoteCardProps) {
     })
   }
 
-  // Obtener solo el primer hashtag
   const mainHashtag = note.hashtags.length > 0 ? note.hashtags[0] : null
 
   return (
@@ -179,7 +240,26 @@ function NoteCard({ note, onSwipe }: NoteCardProps) {
       onTouchMove={onTouchMove}
       onTouchEnd={onTouchEnd}
     >
-      <p className="text-white mb-2">
+      {/* Botón de editar */}
+      <button
+        onClick={() => onEdit(note)}
+        className="absolute top-2 right-2 bg-[#2d2e30] hover:bg-[#4a4d50] p-2 rounded-lg transition-colors z-10"
+      >
+        <Edit size={14} className="text-gray-400" />
+      </button>
+
+      {/* Imagen de portada si existe */}
+      {note.image_data && (
+        <div className="mb-3 rounded-lg overflow-hidden">
+          <img 
+            src={`data:image/jpeg;base64,${note.image_data}`}
+            alt="Nota"
+            className="w-full h-48 object-cover"
+          />
+        </div>
+      )}
+
+      <p className="text-white mb-2 pr-8">
         {note.ai_classification?.emoji || ''} {note.content}
       </p>
       
