@@ -11,6 +11,7 @@ interface Event {
   start_datetime: string
   location?: string
   color: string
+  note_id?: string
 }
 
 export function CalendarView() {
@@ -19,6 +20,7 @@ export function CalendarView() {
   const [loading, setLoading] = useState(true)
   const [selectedDay, setSelectedDay] = useState<number | null>(null)
   const [selectedDayEvents, setSelectedDayEvents] = useState<Event[]>([])
+  const [notesData, setNotesData] = useState<Record<string, any>>({})
 
   const monthNames = [
     "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
@@ -39,7 +41,18 @@ export function CalendarView() {
         startDate.toISOString(),
         endDate.toISOString()
       )
-      setEvents(result.events || [])
+      
+      const eventsWithNotes = result.events || []
+      setEvents(eventsWithNotes)
+      
+      // Cargar datos de las notas asociadas para obtener emojis
+      const notesResult = await api.getNotes()
+      const notesMap: Record<string, any> = {}
+      notesResult.notes?.forEach((note: any) => {
+        notesMap[note.id] = note
+      })
+      setNotesData(notesMap)
+      
     } catch (error) {
       console.error('Error cargando eventos:', error)
     } finally {
@@ -66,12 +79,17 @@ export function CalendarView() {
     
     return events.filter((event) => {
       if (!event.start_datetime) return false;
-      
-      // Extraer fecha directamente del string UTC (YYYY-MM-DD)
       const eventDateStr = event.start_datetime.split('T')[0];
-      
       return eventDateStr === dateStr;
     });
+  }
+
+  const getEventEmoji = (event: Event) => {
+    if (event.note_id && notesData[event.note_id]) {
+      return notesData[event.note_id].ai_classification?.emoji || '📅'
+    }
+    // Intentar extraer emoji del título como fallback
+    return event.title.match(/^[\p{Emoji}]/u)?.[0] || '📅'
   }
 
   const handleDayClick = (day: number) => {
@@ -153,7 +171,7 @@ export function CalendarView() {
               {dayEvents.length > 0 && (
                 <div className="flex justify-center mt-1">
                   <span className="text-xs">
-                    {dayEvents[0].title.match(/^[\p{Emoji}]/u)?.[0] || '📅'}
+                    {getEventEmoji(dayEvents[0])}
                   </span>
                 </div>
               )}
@@ -180,7 +198,13 @@ export function CalendarView() {
               ) : (
                 <div className="space-y-3">
                   {selectedDayEvents.map((event) => (
-                    <EventCard key={event.id} event={event} onDelete={handleDeleteEvent} getEventTime={getEventTime} />
+                    <EventCard 
+                      key={event.id} 
+                      event={event} 
+                      onDelete={handleDeleteEvent} 
+                      getEventTime={getEventTime}
+                      getEventEmoji={() => getEventEmoji(event)}
+                    />
                   ))}
                 </div>
               )}
@@ -203,6 +227,7 @@ export function CalendarView() {
                 event={event} 
                 onDelete={handleDeleteEvent}
                 getEventTime={getEventTime}
+                getEventEmoji={() => getEventEmoji(event)}
               />
             ))}
           </div>
@@ -216,9 +241,10 @@ interface EventCardProps {
   event: Event;
   onDelete: (eventId: string) => void;
   getEventTime: (datetime: string) => string;
+  getEventEmoji: () => string;
 }
 
-function EventCard({ event, onDelete, getEventTime }: EventCardProps) {
+function EventCard({ event, onDelete, getEventTime, getEventEmoji }: EventCardProps) {
   const [touchStart, setTouchStart] = useState<number | null>(null)
   const [touchEnd, setTouchEnd] = useState<number | null>(null)
 
@@ -252,7 +278,7 @@ function EventCard({ event, onDelete, getEventTime }: EventCardProps) {
     >
       <div className="flex items-start justify-between mb-2">
         <div className="flex-1">
-          <h4 className="text-white font-medium">{event.title}</h4>
+          <h4 className="text-white font-medium">{getEventEmoji()} {event.title}</h4>
           {event.description && (
             <p className="text-gray-400 text-sm mt-1">{event.description}</p>
           )}
@@ -271,9 +297,10 @@ interface EventItemProps {
   event: Event;
   onDelete: (eventId: string) => void;
   getEventTime: (datetime: string) => string;
+  getEventEmoji: () => string;
 }
 
-function EventItem({ event, onDelete, getEventTime }: EventItemProps) {
+function EventItem({ event, onDelete, getEventTime, getEventEmoji }: EventItemProps) {
   const [touchStart, setTouchStart] = useState<number | null>(null)
   const [touchEnd, setTouchEnd] = useState<number | null>(null)
 
@@ -307,7 +334,7 @@ function EventItem({ event, onDelete, getEventTime }: EventItemProps) {
     >
       <div className={`w-3 h-3 rounded-full bg-${event.color || 'blue'}-500 mr-3`}></div>
       <div className="flex-1">
-        <p className="text-white text-sm font-medium">{event.title}</p>
+        <p className="text-white text-sm font-medium">{getEventEmoji()} {event.title}</p>
         <p className="text-gray-400 text-xs">{getEventTime(event.start_datetime)}</p>
       </div>
     </div>
