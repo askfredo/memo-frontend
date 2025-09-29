@@ -67,8 +67,8 @@ export function CalendarView() {
     return events.filter((event) => {
       if (!event.start_datetime) return false;
       
-      const eventDate = new Date(event.start_datetime);
-      const eventDateStr = `${eventDate.getFullYear()}-${String(eventDate.getMonth() + 1).padStart(2, "0")}-${String(eventDate.getDate()).padStart(2, "0")}`;
+      // Extraer fecha directamente del string UTC (YYYY-MM-DD)
+      const eventDateStr = event.start_datetime.split('T')[0];
       
       return eventDateStr === dateStr;
     });
