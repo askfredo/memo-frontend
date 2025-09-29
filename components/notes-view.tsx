@@ -11,6 +11,7 @@ interface Note {
   is_favorite: boolean
   hashtags: string[]
   ai_classification?: any
+  created_at: string
 }
 
 export function NotesView() {
@@ -157,6 +158,18 @@ function NoteCard({ note, onSwipe }: NoteCardProps) {
     }
   }
 
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString)
+    return date.toLocaleDateString('es-ES', { 
+      day: '2-digit', 
+      month: '2-digit', 
+      year: 'numeric' 
+    })
+  }
+
+  // Obtener solo el primer hashtag
+  const mainHashtag = note.hashtags.length > 0 ? note.hashtags[0] : null
+
   return (
     <div
       className={`note p-4 rounded-xl shadow-lg cursor-grab bg-[#3c4043] relative transition-all ${
@@ -169,14 +182,21 @@ function NoteCard({ note, onSwipe }: NoteCardProps) {
       <p className="text-white mb-2">
         {note.ai_classification?.emoji || ''} {note.content}
       </p>
-      <div className="flex flex-wrap gap-1">
-        {note.hashtags.map((hashtag) => (
-          <span key={hashtag} className="text-xs bg-[#2d2e30] text-blue-300 px-2 py-1 rounded-full">
-            {hashtag}
+      
+      <div className="flex items-center justify-between mt-2">
+        <div className="flex items-center gap-2">
+          {mainHashtag && (
+            <span className="text-xs bg-[#2d2e30] text-blue-300 px-2 py-1 rounded-full">
+              {mainHashtag}
+            </span>
+          )}
+          <span className="text-xs text-gray-500">
+            {formatDate(note.created_at)}
           </span>
-        ))}
+        </div>
+        
+        {note.is_favorite && <Star className="text-yellow-400 fill-current" size={16} />}
       </div>
-      {note.is_favorite && <Star className="absolute top-3 right-3 text-yellow-400 fill-current" size={16} />}
     </div>
   )
 }
