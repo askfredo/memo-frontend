@@ -39,6 +39,15 @@ export const api = {
     return response.json();
   },
 
+  async createNoteFromImage(imageBase64: string) {
+    const response = await fetch(`${API_URL}/notes/from-image`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ imageBase64 })
+    });
+    return response.json();
+  },
+
   // ==================== CALENDARIO/EVENTOS ====================
   async getEvents(startDate?: string, endDate?: string) {
     let url = `${API_URL}/calendar/events`;

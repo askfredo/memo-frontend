@@ -1,16 +1,18 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { VoiceAssistant } from "@/components/voice-assistant"
 import { EmailConfigModal } from "@/components/email-config-modal"
 import { api } from "@/lib/api"
-import { StickyNote, Calendar } from "lucide-react"
+import { StickyNote, Calendar, Camera } from "lucide-react"
 
 export function HomeView() {
   const [isListening, setIsListening] = useState(false)
   const [showEmailConfig, setShowEmailConfig] = useState(false)
   const [showFeedback, setShowFeedback] = useState(false)
   const [feedbackType, setFeedbackType] = useState<'note' | 'calendar'>('note')
+  const [isProcessingImage, setIsProcessingImage] = useState(false)
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   const playNoteSound = () => {
     const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
@@ -89,6 +91,39 @@ export function HomeView() {
     }
   }
 
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    setIsProcessingImage(true)
+
+    const reader = new FileReader()
+    reader.onloadend = async () => {
+      const base64 = reader.result?.toString().split(',')[1]
+      if (!base64) return
+
+      try {
+        const result = await api.createNoteFromImage(base64)
+        
+        if (result.type === 'event') {
+          setFeedbackType('calendar')
+          playCalendarSound()
+        } else {
+          setFeedbackType('note')
+          playNoteSound()
+        }
+
+        setShowFeedback(true)
+        setTimeout(() => setShowFeedback(false), 1500)
+      } catch (error) {
+        console.error('Error procesando imagen:', error)
+      } finally {
+        setIsProcessingImage(false)
+      }
+    }
+    reader.readAsDataURL(file)
+  }
+
   useEffect(() => {
     if (!isListening) return
 
@@ -157,6 +192,33 @@ export function HomeView() {
           )}
         </div>
       </div>
+
+      {/* Botón flotante de cámara */}
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/*"
+        capture="environment"
+        onChange={handleImageUpload}
+        className="hidden"
+      />
+      <button
+        onClick={() => fileInputRef.current?.click()}
+        disabled={isProcessingImage}
+        className="fixed bottom-24 right-4 bg-purple-500 p-4 rounded-full shadow-lg z-40 hover:bg-purple-600 transition-colors disabled:opacity-50"
+      >
+        <Camera size={24} className="text-white" />
+      </button>
+
+      {/* Loading de procesamiento de imagen */}
+      {isProcessingImage && (
+        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-4 border-purple-500 border-t-transparent mx-auto mb-4"></div>
+            <p className="text-white">Analizando imagen...</p>
+          </div>
+        </div>
+      )}
 
       <EmailConfigModal 
         isOpen={showEmailConfig} 
