@@ -55,27 +55,21 @@ export function ChatOverlay({ isOpen, onClose, isListening, onStopListening }: C
       let response: string
       
       if (result.event) {
-  // Si se creó un evento (calendar_event, social_event o reminder)
-  const eventDate = new Date(result.event.start_datetime).toLocaleDateString('es-ES', { 
-    weekday: 'long', 
-    day: 'numeric', 
-    month: 'long' 
-  });
-  response = `${result.classification.emoji || '📅'} Evento creado para ${eventDate}: "${result.event.title}"`;
-  
-  if (result.classification.entities.participants?.length > 0) {
-    response += ` | Participantes: ${result.classification.entities.participants.join(', ')}`;
-  }
-  setCurrentNote(result)
-  setShowActions(true)
-} else if (result.classification.intent === 'simple_note') {
-        response = `Detecté un evento: "${result.event.title}". Se ha guardado en tu calendario.`
+        // Si se creó un evento (calendar_event o reminder)
+        const eventDate = new Date(result.event.start_datetime).toLocaleDateString('es-ES', { 
+          weekday: 'long', 
+          day: 'numeric', 
+          month: 'long' 
+        });
+        response = `${result.classification.emoji || '📅'} Evento creado para ${eventDate}: "${result.event.title}"`;
+        
         if (result.classification.entities.participants?.length > 0) {
-          response += ` Participantes: ${result.classification.entities.participants.join(', ')}.`
+          response += ` | Participantes: ${result.classification.entities.participants.join(', ')}`;
         }
         setCurrentNote(result)
         setShowActions(true)
       } else if (result.classification.intent === 'simple_note') {
+        // Si es una nota simple sin fecha
         response = `Guardé tu nota: "${result.note.content}"`
         setCurrentNote(result)
       } else {
