@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Star, Edit, Check } from "lucide-react"
 
 interface ChecklistItem {
@@ -32,6 +32,17 @@ export function ChecklistNoteCard({ note, onSwipe, onEdit, onUpdateChecklist }: 
   const [items, setItems] = useState<ChecklistItem[]>(
     note.checklist_data ? JSON.parse(note.checklist_data) : parseChecklistItems(note.content)
   )
+
+  // Sincronizar estado cuando cambie checklist_data desde el servidor
+  useEffect(() => {
+    if (note.checklist_data) {
+      try {
+        setItems(JSON.parse(note.checklist_data))
+      } catch (error) {
+        console.error('Error parsing checklist_data:', error)
+      }
+    }
+  }, [note.checklist_data])
 
   const minSwipeDistance = 50
 
