@@ -5,6 +5,7 @@ import { useState, useEffect } from "react"
 import { Star, Hash, Plus, Edit } from "lucide-react"
 import { api } from "@/lib/api"
 import { NoteEditorModal } from "@/components/note-editor-modal"
+import { ChecklistNoteCard } from "@/components/checklist-note-card"
 
 interface Note {
   id: string
@@ -13,6 +14,7 @@ interface Note {
   hashtags: string[]
   ai_classification?: any
   image_data?: string
+  checklist_data?: string
   created_at: string
 }
 
@@ -83,7 +85,6 @@ export function NotesView() {
   const handleSaveNote = async (content: string, hashtags: string[]) => {
     try {
       if (editingNote) {
-        // Editar nota existente
         await api.updateNote(editingNote.id, { content, hashtags })
         setNotes((prev) =>
           prev.map((n) =>
@@ -91,10 +92,8 @@ export function NotesView() {
           )
         )
       } else {
-        // Crear nueva nota
         const result = await api.createNote(content)
         if (result.note) {
-          // Actualizar hashtags si es necesario
           if (hashtags.length > 0) {
             await api.updateNote(result.note.id, { hashtags })
             result.note.hashtags = hashtags
@@ -105,6 +104,23 @@ export function NotesView() {
     } catch (error) {
       console.error('Error guardando nota:', error)
     }
+  }
+
+  const handleUpdateChecklist = async (noteId: string, items: any[]) => {
+    try {
+      await api.updateNote(noteId, { checklistData: JSON.stringify(items) })
+      setNotes((prev) =>
+        prev.map((n) =>
+          n.id === noteId ? { ...n, checklist_data: JSON.stringify(items) } : n
+        )
+      )
+    } catch (error) {
+      console.error('Error actualizando checklist:', error)
+    }
+  }
+
+  const isChecklist = (note: Note): boolean => {
+    return note.content.includes('•')
   }
 
   if (loading) {
@@ -163,12 +179,22 @@ export function NotesView() {
       ) : (
         <div className="space-y-3 overflow-y-auto">
           {sortedNotes.map((note) => (
-            <NoteCard 
-              key={note.id} 
-              note={note} 
-              onSwipe={handleSwipe}
-              onEdit={handleEditNote}
-            />
+            isChecklist(note) ? (
+              <ChecklistNoteCard
+                key={note.id}
+                note={note}
+                onSwipe={handleSwipe}
+                onEdit={handleEditNote}
+                onUpdateChecklist={handleUpdateChecklist}
+              />
+            ) : (
+              <NoteCard 
+                key={note.id} 
+                note={note} 
+                onSwipe={handleSwipe}
+                onEdit={handleEditNote}
+              />
+            )
           ))}
         </div>
       )}
@@ -240,7 +266,6 @@ function NoteCard({ note, onSwipe, onEdit }: NoteCardProps) {
       onTouchMove={onTouchMove}
       onTouchEnd={onTouchEnd}
     >
-      {/* Botón de editar */}
       <button
         onClick={() => onEdit(note)}
         className="absolute top-2 right-2 bg-[#2d2e30] hover:bg-[#4a4d50] p-2 rounded-lg transition-colors z-10"
@@ -248,7 +273,6 @@ function NoteCard({ note, onSwipe, onEdit }: NoteCardProps) {
         <Edit size={14} className="text-gray-400" />
       </button>
 
-      {/* Imagen de portada si existe */}
       {note.image_data && (
         <div className="mb-3 rounded-lg overflow-hidden">
           <img 

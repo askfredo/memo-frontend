@@ -1,7 +1,6 @@
 const API_URL = 'https://memo-backend-production.up.railway.app/api';
 
 export const api = {
-  // ==================== NOTAS ====================
   async createNote(content: string, userId?: string) {
     const response = await fetch(`${API_URL}/notes`, {
       method: 'POST',
@@ -22,7 +21,8 @@ export const api = {
   async updateNote(noteId: string, updates: { 
     isFavorite?: boolean; 
     hashtags?: string[]; 
-    content?: string 
+    content?: string;
+    checklistData?: string;
   }) {
     const response = await fetch(`${API_URL}/notes/${noteId}`, {
       method: 'PATCH',
@@ -48,7 +48,6 @@ export const api = {
     return response.json();
   },
 
-  // ==================== CALENDARIO/EVENTOS ====================
   async getEvents(startDate?: string, endDate?: string) {
     let url = `${API_URL}/calendar/events`;
     if (startDate && endDate) {
@@ -65,7 +64,6 @@ export const api = {
     return response.json();
   },
 
-  // ==================== PERFIL DE USUARIO ====================
   async getUserProfile() {
     const response = await fetch(`${API_URL}/user/profile`);
     return response.json();
