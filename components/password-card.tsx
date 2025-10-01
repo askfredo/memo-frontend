@@ -45,10 +45,9 @@ export function PasswordCard({ password, onEdit, onDelete, onToggleFavorite }: P
     }
   }
 
-  const copyToClipboard = async (text: string, label: string) => {
+  const copyToClipboard = async (text: string) => {
     try {
       await navigator.clipboard.writeText(text)
-      // Mostrar feedback visual
       const button = document.activeElement as HTMLElement
       if (button) {
         button.style.color = '#10b981'
@@ -66,20 +65,19 @@ export function PasswordCard({ password, onEdit, onDelete, onToggleFavorite }: P
       try {
         setLoadingPassword(true)
         const result = await api.getPassword(password.id)
-        await copyToClipboard(result.password.password, 'Contraseña')
+        await copyToClipboard(result.password.password)
       } catch (error) {
         console.error('Error:', error)
       } finally {
         setLoadingPassword(false)
       }
     } else {
-      await copyToClipboard(actualPassword, 'Contraseña')
+      await copyToClipboard(actualPassword)
     }
   }
 
   return (
     <div className="bg-[#3c4043] p-4 rounded-xl relative">
-      {/* Header */}
       <div className="flex items-start justify-between mb-3">
         <div className="flex items-center gap-3 flex-1">
           <span className="text-3xl">{password.icon}</span>
@@ -110,7 +108,6 @@ export function PasswordCard({ password, onEdit, onDelete, onToggleFavorite }: P
         </button>
       </div>
 
-      {/* Información */}
       <div className="space-y-2 mb-3">
         {password.username && (
           <div className="flex items-center justify-between bg-[#2d2e30] p-2 rounded">
@@ -119,7 +116,7 @@ export function PasswordCard({ password, onEdit, onDelete, onToggleFavorite }: P
               <span className="text-white text-sm truncate block">{password.username}</span>
             </div>
             <button
-              onClick={() => copyToClipboard(password.username!, 'Usuario')}
+              onClick={() => copyToClipboard(password.username!)}
               className="text-gray-400 hover:text-white ml-2"
             >
               <Copy size={16} />
@@ -134,7 +131,7 @@ export function PasswordCard({ password, onEdit, onDelete, onToggleFavorite }: P
               <span className="text-white text-sm truncate block">{password.email}</span>
             </div>
             <button
-              onClick={() => copyToClipboard(password.email!, 'Email')}
+              onClick={() => copyToClipboard(password.email!)}
               className="text-gray-400 hover:text-white ml-2"
             >
               <Copy size={16} />
@@ -142,7 +139,6 @@ export function PasswordCard({ password, onEdit, onDelete, onToggleFavorite }: P
           </div>
         )}
 
-        {/* Contraseña */}
         <div className="flex items-center justify-between bg-[#2d2e30] p-2 rounded">
           <div className="flex-1 min-w-0">
             <span className="text-gray-400 text-xs block">Contraseña</span>
@@ -182,7 +178,6 @@ export function PasswordCard({ password, onEdit, onDelete, onToggleFavorite }: P
         )}
       </div>
 
-      {/* Acciones */}
       <div className="flex items-center justify-between pt-3 border-t border-gray-600">
         <span className="text-xs bg-[#2d2e30] text-blue-300 px-2 py-1 rounded-full">
           {password.category}
