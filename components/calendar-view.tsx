@@ -11,7 +11,7 @@ interface Event {
   start_datetime: string
   location?: string
   color: string
-  emoji?: string  // Agregar campo emoji
+  emoji?: string
 }
 
 export function CalendarView() {
@@ -68,26 +68,21 @@ export function CalendarView() {
     return events.filter((event) => {
       if (!event.start_datetime) return false;
       
-      // Extraer fecha directamente del string UTC (YYYY-MM-DD)
       const eventDateStr = event.start_datetime.split('T')[0];
       
       return eventDateStr === dateStr;
     });
   }
 
-  // Función mejorada para obtener el emoji del evento
   const getEventEmoji = (event: Event): string => {
-    // 1. Si tiene campo emoji, usarlo
     if (event.emoji) return event.emoji;
     
-    // 2. Intentar extraer emoji del título
     const emojiMatch = event.title.match(/^[\p{Emoji_Presentation}\p{Emoji}\uFE0F]/u);
     if (emojiMatch) return emojiMatch[0];
     
-    // 3. Fallback basado en palabras clave del título
     const title = event.title.toLowerCase();
     if (title.includes('cumpleaños') || title.includes('fiesta')) return '🎉';
-    if (title.includes('doctor') || title.includes('médico')) return '🏥';
+    if (title.includes('doctor') || title.includes('médico')) return '🥇';
     if (title.includes('comida') || title.includes('restaurante')) return '🍽️';
     if (title.includes('pago') || title.includes('compra')) return '💰';
     if (title.includes('película') || title.includes('cine')) return '🎬';
@@ -97,7 +92,6 @@ export function CalendarView() {
     if (title.includes('estudio') || title.includes('clase')) return '📚';
     if (title.includes('misa') || title.includes('iglesia')) return '⛪';
     
-    // 4. Emoji por defecto más variado basado en el color
     const colorEmojis: Record<string, string> = {
       blue: '🔵',
       red: '🔴',
@@ -128,7 +122,7 @@ export function CalendarView() {
 
   const isAllDayEvent = (datetime: string) => {
     const date = new Date(datetime);
-    return date.getUTCHours() === 0 && date.getUTCMinutes() === 0;
+    return date.getHours() === 0 && date.getMinutes() === 0;
   }
 
   const getEventTime = (datetime: string) => {
