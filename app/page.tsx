@@ -9,7 +9,7 @@ import { BottomNavigation } from "@/components/bottom-navigation"
 import { NotificationBell } from "@/components/notification-bell"
 import { NotificationsPanel } from "@/components/notifications-panel"
 
-export type ViewType = "notes" | "home" | "calendar" | "vault"
+export type ViewType = "notes" | "home" | "calendar" 
 
 export default function MemoVozApp() {
   const [currentView, setCurrentView] = useState<ViewType>("home")

@@ -2,10 +2,11 @@
 
 import type React from "react"
 import { useState, useEffect } from "react"
-import { Star, Hash, Plus, Edit } from "lucide-react"
+import { Star, Hash, Plus, Edit, Lock } from "lucide-react"
 import { api } from "@/lib/api"
 import { NoteEditorModal } from "@/components/note-editor-modal"
 import { ChecklistNoteCard } from "@/components/checklist-note-card"
+import { SecretNotesModal } from "@/components/secret-notes-modal"
 
 interface Note {
   id: string
@@ -24,6 +25,7 @@ export function NotesView() {
   const [loading, setLoading] = useState(true)
   const [isEditorOpen, setIsEditorOpen] = useState(false)
   const [editingNote, setEditingNote] = useState<Note | null>(null)
+  const [showSecretNotes, setShowSecretNotes] = useState(false)
 
   useEffect(() => {
     loadNotes()
@@ -33,7 +35,11 @@ export function NotesView() {
     try {
       setLoading(true)
       const result = await api.getNotes()
-      setNotes(result.notes || [])
+      // Filtrar notas secretas
+      const publicNotes = (result.notes || []).filter((note: Note) => 
+        !note.hashtags?.includes('#secreto')
+      )
+      setNotes(publicNotes)
     } catch (error) {
       console.error('Error cargando notas:', error)
     } finally {
@@ -135,12 +141,22 @@ export function NotesView() {
     <div className="h-full p-4 pb-20">
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-xl font-medium text-gray-400">Notas</h2>
-        <button
-          onClick={handleCreateNote}
-          className="bg-blue-500 hover:bg-blue-600 text-white p-2 rounded-full transition-colors"
-        >
-          <Plus size={20} />
-        </button>
+        <div className="flex gap-2">
+          <button
+            onClick={() => setShowSecretNotes(true)}
+            className="bg-yellow-500 hover:bg-yellow-600 text-black p-2 rounded-full transition-colors"
+            title="Notas Secretas"
+          >
+            <Lock size={20} />
+          </button>
+          <button
+            onClick={handleCreateNote}
+            className="bg-blue-500 hover:bg-blue-600 text-white p-2 rounded-full transition-colors"
+            title="Nueva Nota"
+          >
+            <Plus size={20} />
+          </button>
+        </div>
       </div>
 
       <div className="mb-4">
@@ -206,6 +222,11 @@ export function NotesView() {
         initialContent={editingNote?.content || ""}
         initialHashtags={editingNote?.hashtags || []}
         title={editingNote ? "Editar Nota" : "Nueva Nota"}
+      />
+
+      <SecretNotesModal 
+        isOpen={showSecretNotes} 
+        onClose={() => setShowSecretNotes(false)} 
       />
     </div>
   )

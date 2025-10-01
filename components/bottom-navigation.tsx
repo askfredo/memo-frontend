@@ -1,7 +1,7 @@
 "use client"
 
 import type { ViewType } from "@/app/page"
-import { StickyNote, Home, Calendar, Lock } from "lucide-react"
+import { StickyNote, Home, Calendar } from "lucide-react"
 
 interface BottomNavigationProps {
   currentView: ViewType
@@ -13,7 +13,6 @@ export function BottomNavigation({ currentView, onViewChange }: BottomNavigation
     { id: "notes" as ViewType, icon: StickyNote, label: "Notas" },
     { id: "home" as ViewType, icon: Home, label: "Home" },
     { id: "calendar" as ViewType, icon: Calendar, label: "Calendario" },
-    { id: "vault" as ViewType, icon: Lock, label: "Vault" },
   ]
 
   return (
