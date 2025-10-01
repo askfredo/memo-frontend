@@ -21,12 +21,13 @@ interface PasswordCardProps {
   onToggleFavorite: (passwordId: string, isFavorite: boolean) => void
 }
 
-export function PasswordCard({ password, onEdit, onDelete, onToggleFavorite }: PasswordCardProps) {
+export function PasswordCard(props: PasswordCardProps) {
+  const { password, onEdit, onDelete, onToggleFavorite } = props
   const [showPassword, setShowPassword] = useState(false)
   const [actualPassword, setActualPassword] = useState<string | null>(null)
   const [loadingPassword, setLoadingPassword] = useState(false)
 
-  const loadPassword = async () => {
+  async function loadPassword() {
     if (actualPassword) {
       setShowPassword(!showPassword)
       return
@@ -38,34 +39,17 @@ export function PasswordCard({ password, onEdit, onDelete, onToggleFavorite }: P
       setActualPassword(result.password.password)
       setShowPassword(true)
     } catch (error) {
-      console.error('Error cargando contraseña:', error)
-      alert('Error al cargar la contraseña')
+      console.error('Error:', error)
     } finally {
       setLoadingPassword(false)
     }
   }
 
-  const copyToClipboard = async (text: string) => {
+  async function copyText(text: string) {
     try {
       await navigator.clipboard.writeText(text)
     } catch (error) {
-      console.error('Error copiando:', error)
-    }
-  }
-
-  const handleCopyPassword = async () => {
-    if (!actualPassword) {
-      try {
-        setLoadingPassword(true)
-        const result = await api.getPassword(password.id)
-        await copyToClipboard(result.password.password)
-      } catch (error) {
-        console.error('Error:', error)
-      } finally {
-        setLoadingPassword(false)
-      }
-    } else {
-      await copyToClipboard(actualPassword)
+      console.error('Error:', error)
     }
   }
 
@@ -105,10 +89,7 @@ export function PasswordCard({ password, onEdit, onDelete, onToggleFavorite }: P
               <span className="text-gray-400 text-xs block">Usuario</span>
               <span className="text-white text-sm truncate block">{password.username}</span>
             </div>
-            <button
-              onClick={() => copyToClipboard(password.username!)}
-              className="text-gray-400 hover:text-white ml-2"
-            >
+            <button onClick={() => copyText(password.username!)} className="text-gray-400 hover:text-white ml-2">
               <Copy size={16} />
             </button>
           </div>
@@ -120,10 +101,7 @@ export function PasswordCard({ password, onEdit, onDelete, onToggleFavorite }: P
               <span className="text-gray-400 text-xs block">Email</span>
               <span className="text-white text-sm truncate block">{password.email}</span>
             </div>
-            <button
-              onClick={() => copyToClipboard(password.email!)}
-              className="text-gray-400 hover:text-white ml-2"
-            >
+            <button onClick={() => copyText(password.email!)} className="text-gray-400 hover:text-white ml-2">
               <Copy size={16} />
             </button>
           </div>
@@ -137,24 +115,10 @@ export function PasswordCard({ password, onEdit, onDelete, onToggleFavorite }: P
             </span>
           </div>
           <div className="flex items-center gap-2 ml-2">
-            <button
-              onClick={loadPassword}
-              disabled={loadingPassword}
-              className="text-gray-400 hover:text-white disabled:opacity-50"
-            >
-              {loadingPassword ? (
-                <div className="w-4 h-4 border-2 border-gray-400 border-t-transparent rounded-full animate-spin" />
-              ) : showPassword ? (
-                <EyeOff size={16} />
-              ) : (
-                <Eye size={16} />
-              )}
+            <button onClick={loadPassword} disabled={loadingPassword} className="text-gray-400 hover:text-white">
+              {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
             </button>
-            <button
-              onClick={handleCopyPassword}
-              disabled={loadingPassword}
-              className="text-gray-400 hover:text-white disabled:opacity-50"
-            >
+            <button onClick={() => copyText(actualPassword || '')} className="text-gray-400 hover:text-white">
               <Copy size={16} />
             </button>
           </div>
@@ -173,16 +137,10 @@ export function PasswordCard({ password, onEdit, onDelete, onToggleFavorite }: P
           {password.category}
         </span>
         <div className="flex gap-2">
-          <button
-            onClick={() => onEdit(password)}
-            className="text-blue-400 hover:text-blue-300 p-1"
-          >
+          <button onClick={() => onEdit(password)} className="text-blue-400 hover:text-blue-300 p-1">
             <Edit size={16} />
           </button>
-          <button
-            onClick={() => onDelete(password.id)}
-            className="text-red-400 hover:text-red-300 p-1"
-          >
+          <button onClick={() => onDelete(password.id)} className="text-red-400 hover:text-red-300 p-1">
             <Trash2 size={16} />
           </button>
         </div>
