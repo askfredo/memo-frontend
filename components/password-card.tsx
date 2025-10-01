@@ -48,13 +48,6 @@ export function PasswordCard({ password, onEdit, onDelete, onToggleFavorite }: P
   const copyToClipboard = async (text: string) => {
     try {
       await navigator.clipboard.writeText(text)
-      const button = document.activeElement as HTMLElement
-      if (button) {
-        button.style.color = '#10b981'
-        setTimeout(() => {
-          button.style.color = ''
-        }, 1000)
-      }
     } catch (error) {
       console.error('Error copiando:', error)
     }
@@ -101,10 +94,7 @@ export function PasswordCard({ password, onEdit, onDelete, onToggleFavorite }: P
           onClick={() => onToggleFavorite(password.id, password.is_favorite)}
           className="text-gray-400 hover:text-yellow-400 transition-colors"
         >
-          <Star
-            size={18}
-            className={password.is_favorite ? 'fill-yellow-400 text-yellow-400' : ''}
-          />
+          <Star size={18} className={password.is_favorite ? 'fill-yellow-400 text-yellow-400' : ''} />
         </button>
       </div>
 
@@ -153,7 +143,7 @@ export function PasswordCard({ password, onEdit, onDelete, onToggleFavorite }: P
               className="text-gray-400 hover:text-white disabled:opacity-50"
             >
               {loadingPassword ? (
-                <div className="w-4 h-4 border-2 border-gray-400 border-t-transparent rounded-full animate-spin"></div>
+                <div className="w-4 h-4 border-2 border-gray-400 border-t-transparent rounded-full animate-spin" />
               ) : showPassword ? (
                 <EyeOff size={16} />
               ) : (
