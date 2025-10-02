@@ -3,9 +3,8 @@
 import { useState, useEffect, useRef } from "react"
 import { VoiceAssistant } from "@/components/voice-assistant"
 import { EmailConfigModal } from "@/components/email-config-modal"
-import { AIChatModal } from "@/components/ai-chat-modal"
 import { api } from "@/lib/api"
-import { StickyNote, Calendar, Camera, MessageSquare, Save } from "lucide-react"
+import { StickyNote, Calendar, Camera, Save } from "lucide-react"
 
 interface ConversationMessage {
   type: 'user' | 'assistant'
@@ -19,13 +18,13 @@ export function HomeView() {
   const [showFeedback, setShowFeedback] = useState(false)
   const [feedbackType, setFeedbackType] = useState<'note' | 'calendar'>('note')
   const [isProcessingImage, setIsProcessingImage] = useState(false)
-  const [showAIChat, setShowAIChat] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
   
-  // Nuevos estados para modo conversacional
   const [conversationMessages, setConversationMessages] = useState<ConversationMessage[]>([])
   const [inactivityTimer, setInactivityTimer] = useState<NodeJS.Timeout | null>(null)
   const [showSaveButton, setShowSaveButton] = useState(false)
+  const [isProcessing, setIsProcessing] = useState(false)
+  const [shouldAutoListen, setShouldAutoListen] = useState(false)
 
   const playNoteSound = () => {
     const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
@@ -99,26 +98,29 @@ export function HomeView() {
       if (conversationMessages.length > 0) {
         setShowSaveButton(true)
       }
-    }, 10000) // 10 segundos de inactividad
+    }, 15000) // 15 segundos de inactividad
     
     setInactivityTimer(timer)
   }
 
   const processVoiceInput = async (text: string) => {
     try {
+      setIsProcessing(true)
       addMessage('user', text)
       resetInactivityTimer()
 
       const response = await fetch('https://memo-backend-production.up.railway.app/api/assistant/process', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message: text })
+        body: JSON.stringify({ 
+          message: text,
+          conversationHistory: conversationMessages
+        })
       })
 
       const result = await response.json()
 
       if (result.type === 'conversation') {
-        // Es una respación - mostrar respuesta
         addMessage('assistant', result.response)
         
         // Text to speech
@@ -126,7 +128,19 @@ export function HomeView() {
           const utterance = new SpeechSynthesisUtterance(result.response)
           utterance.lang = "es-ES"
           utterance.rate = 1.1
+          
+          utterance.onend = () => {
+            setIsProcessing(false)
+            // Auto-reactivar micrófono después de hablar
+            setTimeout(() => {
+              setShouldAutoListen(true)
+            }, 500)
+          }
+          
           speechSynthesis.speak(utterance)
+        } else {
+          setIsProcessing(false)
+          setTimeout(() => setShouldAutoListen(true), 500)
         }
       } else if (result.type === 'event_created') {
         setFeedbackType('calendar')
@@ -134,18 +148,23 @@ export function HomeView() {
         addMessage('assistant', result.response)
         setShowFeedback(true)
         setTimeout(() => setShowFeedback(false), 1500)
+        setIsProcessing(false)
+        setTimeout(() => setShouldAutoListen(true), 1500)
       } else {
         setFeedbackType('note')
         playNoteSound()
         addMessage('assistant', result.response)
         setShowFeedback(true)
         setTimeout(() => setShowFeedback(false), 1500)
+        setIsProcessing(false)
+        setTimeout(() => setShouldAutoListen(true), 1500)
       }
 
       resetInactivityTimer()
     } catch (error) {
       console.error('Error procesando voz:', error)
       addMessage('assistant', 'Lo siento, hubo un error.')
+      setIsProcessing(false)
     }
   }
 
@@ -207,6 +226,14 @@ export function HomeView() {
     reader.readAsDataURL(file)
   }
 
+  // Auto-reactivar micrófono
+  useEffect(() => {
+    if (shouldAutoListen && !isProcessing) {
+      setShouldAutoListen(false)
+      setIsListening(true)
+    }
+  }, [shouldAutoListen, isProcessing])
+
   useEffect(() => {
     if (!isListening) return
 
@@ -250,7 +277,7 @@ export function HomeView() {
       <div className="flex-1 flex flex-col items-center justify-center px-4">
         <div className="relative mb-4">
           <VoiceAssistant
-            onStartListening={() => setIsListening(true)}
+            onStartListening={() => !isProcessing && setIsListening(true)}
             onStopListening={() => setIsListening(false)}
             isListening={isListening}
             onLongPress={() => setShowEmailConfig(true)}
@@ -271,6 +298,12 @@ export function HomeView() {
           {isListening && (
             <div className="absolute -bottom-16 left-1/2 transform -translate-x-1/2 w-max">
               <p className="text-blue-400 text-lg font-medium">Escuchando...</p>
+            </div>
+          )}
+
+          {isProcessing && (
+            <div className="absolute -bottom-16 left-1/2 transform -translate-x-1/2 w-max">
+              <p className="text-purple-400 text-lg font-medium">Procesando...</p>
             </div>
           )}
         </div>
@@ -318,7 +351,7 @@ export function HomeView() {
         )}
       </div>
 
-      {/* Botones flotantes */}
+      {/* Botón flotante de cámara */}
       <input
         ref={fileInputRef}
         type="file"
@@ -328,24 +361,14 @@ export function HomeView() {
         className="hidden"
       />
       
-      <div className="fixed bottom-24 right-4 flex flex-col gap-3 z-40">
-        <button
-          onClick={() => setShowAIChat(true)}
-          className="bg-purple-500 p-4 rounded-full shadow-lg hover:bg-purple-600 transition-colors"
-          title="Chat con AI"
-        >
-          <MessageSquare size={24} className="text-white" />
-        </button>
-
-        <button
-          onClick={() => fileInputRef.current?.click()}
-          disabled={isProcessingImage}
-          className="bg-purple-500 p-4 rounded-full shadow-lg hover:bg-purple-600 transition-colors disabled:opacity-50"
-          title="Subir imagen"
-        >
-          <Camera size={24} className="text-white" />
-        </button>
-      </div>
+      <button
+        onClick={() => fileInputRef.current?.click()}
+        disabled={isProcessingImage}
+        className="fixed bottom-24 right-4 bg-purple-500 p-4 rounded-full shadow-lg hover:bg-purple-600 transition-colors disabled:opacity-50 z-40"
+        title="Subir imagen"
+      >
+        <Camera size={24} className="text-white" />
+      </button>
 
       {isProcessingImage && (
         <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50">
@@ -359,11 +382,6 @@ export function HomeView() {
       <EmailConfigModal 
         isOpen={showEmailConfig} 
         onClose={() => setShowEmailConfig(false)} 
-      />
-
-      <AIChatModal 
-        isOpen={showAIChat} 
-        onClose={() => setShowAIChat(false)} 
       />
 
       <style jsx>{`
