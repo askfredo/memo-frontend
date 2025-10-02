@@ -5,7 +5,13 @@ import { VoiceAssistant } from "@/components/voice-assistant"
 import { EmailConfigModal } from "@/components/email-config-modal"
 import { AIChatModal } from "@/components/ai-chat-modal"
 import { api } from "@/lib/api"
-import { StickyNote, Calendar, Camera, MessageSquare } from "lucide-react"
+import { StickyNote, Calendar, Camera, MessageSquare, Save } from "lucide-react"
+
+interface ConversationMessage {
+  type: 'user' | 'assistant'
+  text: string
+  timestamp: Date
+}
 
 export function HomeView() {
   const [isListening, setIsListening] = useState(false)
@@ -15,6 +21,11 @@ export function HomeView() {
   const [isProcessingImage, setIsProcessingImage] = useState(false)
   const [showAIChat, setShowAIChat] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
+  
+  // Nuevos estados para modo conversacional
+  const [conversationMessages, setConversationMessages] = useState<ConversationMessage[]>([])
+  const [inactivityTimer, setInactivityTimer] = useState<NodeJS.Timeout | null>(null)
+  const [showSaveButton, setShowSaveButton] = useState(false)
 
   const playNoteSound = () => {
     const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
@@ -71,25 +82,95 @@ export function HomeView() {
     });
   }
 
+  const addMessage = (type: 'user' | 'assistant', text: string) => {
+    setConversationMessages(prev => [...prev, {
+      type,
+      text,
+      timestamp: new Date()
+    }])
+  }
+
+  const resetInactivityTimer = () => {
+    if (inactivityTimer) {
+      clearTimeout(inactivityTimer)
+    }
+    
+    const timer = setTimeout(() => {
+      if (conversationMessages.length > 0) {
+        setShowSaveButton(true)
+      }
+    }, 10000) // 10 segundos de inactividad
+    
+    setInactivityTimer(timer)
+  }
+
   const processVoiceInput = async (text: string) => {
     try {
-      const result = await api.createNote(text)
-      
-      if (result.event || result.classification?.intent === 'calendar_event' || result.classification?.intent === 'reminder') {
+      addMessage('user', text)
+      resetInactivityTimer()
+
+      const response = await fetch('https://memo-backend-production.up.railway.app/api/assistant/process', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message: text })
+      })
+
+      const result = await response.json()
+
+      if (result.type === 'conversation') {
+        // Es una respación - mostrar respuesta
+        addMessage('assistant', result.response)
+        
+        // Text to speech
+        if ("speechSynthesis" in window) {
+          const utterance = new SpeechSynthesisUtterance(result.response)
+          utterance.lang = "es-ES"
+          utterance.rate = 1.1
+          speechSynthesis.speak(utterance)
+        }
+      } else if (result.type === 'event_created') {
         setFeedbackType('calendar')
         playCalendarSound()
+        addMessage('assistant', result.response)
+        setShowFeedback(true)
+        setTimeout(() => setShowFeedback(false), 1500)
       } else {
         setFeedbackType('note')
         playNoteSound()
+        addMessage('assistant', result.response)
+        setShowFeedback(true)
+        setTimeout(() => setShowFeedback(false), 1500)
       }
 
-      setShowFeedback(true)
-      setTimeout(() => {
-        setShowFeedback(false)
-      }, 1500)
-
+      resetInactivityTimer()
     } catch (error) {
-      console.error('Error procesando nota:', error)
+      console.error('Error procesando voz:', error)
+      addMessage('assistant', 'Lo siento, hubo un error.')
+    }
+  }
+
+  const handleSaveConversation = async () => {
+    try {
+      const formattedMessages = conversationMessages.map(msg => ({
+        sender: msg.type,
+        text: msg.text
+      }))
+
+      await api.saveConversation(formattedMessages)
+      
+      setConversationMessages([])
+      setShowSaveButton(false)
+      alert('Conversación guardada como nota')
+    } catch (error) {
+      console.error('Error guardando conversación:', error)
+    }
+  }
+
+  const handleClearConversation = () => {
+    setConversationMessages([])
+    setShowSaveButton(false)
+    if (inactivityTimer) {
+      clearTimeout(inactivityTimer)
     }
   }
 
@@ -166,8 +247,8 @@ export function HomeView() {
         <p className="text-gray-400">Tu asistente de recordatorios</p>
       </div>
 
-      <div className="flex-1 flex items-center justify-center">
-        <div className="relative">
+      <div className="flex-1 flex flex-col items-center justify-center px-4">
+        <div className="relative mb-4">
           <VoiceAssistant
             onStartListening={() => setIsListening(true)}
             onStopListening={() => setIsListening(false)}
@@ -193,6 +274,48 @@ export function HomeView() {
             </div>
           )}
         </div>
+
+        {/* Conversación */}
+        {conversationMessages.length > 0 && (
+          <div className="w-full max-w-2xl bg-[#2d2e30] rounded-xl p-4 max-h-64 overflow-y-auto">
+            <div className="space-y-2">
+              {conversationMessages.map((msg, idx) => (
+                <div
+                  key={idx}
+                  className={`text-sm ${
+                    msg.type === 'user' 
+                      ? 'text-blue-300 text-right' 
+                      : 'text-gray-200 text-left'
+                  }`}
+                >
+                  <span className="font-semibold">
+                    {msg.type === 'user' ? 'Tú: ' : 'AI: '}
+                  </span>
+                  {msg.text}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Botón guardar conversación */}
+        {showSaveButton && (
+          <div className="mt-4 flex gap-2">
+            <button
+              onClick={handleSaveConversation}
+              className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg flex items-center gap-2"
+            >
+              <Save size={18} />
+              Guardar conversación
+            </button>
+            <button
+              onClick={handleClearConversation}
+              className="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-lg"
+            >
+              Limpiar
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Botones flotantes */}
@@ -206,7 +329,6 @@ export function HomeView() {
       />
       
       <div className="fixed bottom-24 right-4 flex flex-col gap-3 z-40">
-        {/* Botón de Chat AI */}
         <button
           onClick={() => setShowAIChat(true)}
           className="bg-purple-500 p-4 rounded-full shadow-lg hover:bg-purple-600 transition-colors"
@@ -215,7 +337,6 @@ export function HomeView() {
           <MessageSquare size={24} className="text-white" />
         </button>
 
-        {/* Botón de Cámara */}
         <button
           onClick={() => fileInputRef.current?.click()}
           disabled={isProcessingImage}
@@ -226,7 +347,6 @@ export function HomeView() {
         </button>
       </div>
 
-      {/* Loading de procesamiento de imagen */}
       {isProcessingImage && (
         <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50">
           <div className="text-center">
