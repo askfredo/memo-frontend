@@ -308,6 +308,31 @@ export function HomeView() {
           )}
         </div>
 
+        {/* Conversación - Texto de abajo para arriba */}
+        {conversationMessages.length > 0 && (
+          <div className="w-full max-w-2xl mt-6">
+            <div className="space-y-3 flex flex-col-reverse max-h-80 overflow-y-auto px-4">
+              {[...conversationMessages].reverse().map((msg, idx) => (
+                <div
+                  key={conversationMessages.length - 1 - idx}
+                  className={`${
+                    msg.type === 'user' 
+                      ? 'text-blue-300 text-right' 
+                      : 'text-gray-200 text-left'
+                  }`}
+                >
+                  <p className="text-sm">
+                    <span className="font-semibold">
+                      {msg.type === 'user' ? 'Tú: ' : 'AI: '}
+                    </span>
+                    {msg.text}
+                  </p>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* Prompt para guardar conversación */}
         {showSavePrompt && (
           <div className="fixed bottom-32 left-1/2 transform -translate-x-1/2 bg-[#2d2e30] rounded-xl p-4 shadow-2xl z-50 flex gap-3">
