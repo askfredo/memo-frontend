@@ -194,3 +194,22 @@ export const api = {
     return response.json();
   }
 };
+
+// AI Chat
+  async aiChat(message: string) {
+    const response = await fetch(`${API_URL}/ai/chat`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ message })
+    });
+    return response.json();
+  },
+
+  async saveConversation(conversation: any[]) {
+    const response = await fetch(`${API_URL}/ai/save-conversation`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ conversation })
+    });
+    return response.json();
+  }

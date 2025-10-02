@@ -3,8 +3,9 @@
 import { useState, useEffect, useRef } from "react"
 import { VoiceAssistant } from "@/components/voice-assistant"
 import { EmailConfigModal } from "@/components/email-config-modal"
+import { AIChatModal } from "@/components/ai-chat-modal"
 import { api } from "@/lib/api"
-import { StickyNote, Calendar, Camera } from "lucide-react"
+import { StickyNote, Calendar, Camera, MessageSquare } from "lucide-react"
 
 export function HomeView() {
   const [isListening, setIsListening] = useState(false)
@@ -12,6 +13,7 @@ export function HomeView() {
   const [showFeedback, setShowFeedback] = useState(false)
   const [feedbackType, setFeedbackType] = useState<'note' | 'calendar'>('note')
   const [isProcessingImage, setIsProcessingImage] = useState(false)
+  const [showAIChat, setShowAIChat] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   const playNoteSound = () => {
@@ -193,7 +195,7 @@ export function HomeView() {
         </div>
       </div>
 
-      {/* Botón flotante de cámara */}
+      {/* Botones flotantes */}
       <input
         ref={fileInputRef}
         type="file"
@@ -202,13 +204,27 @@ export function HomeView() {
         onChange={handleImageUpload}
         className="hidden"
       />
-      <button
-        onClick={() => fileInputRef.current?.click()}
-        disabled={isProcessingImage}
-        className="fixed bottom-24 right-4 bg-purple-500 p-4 rounded-full shadow-lg z-40 hover:bg-purple-600 transition-colors disabled:opacity-50"
-      >
-        <Camera size={24} className="text-white" />
-      </button>
+      
+      <div className="fixed bottom-24 right-4 flex flex-col gap-3 z-40">
+        {/* Botón de Chat AI */}
+        <button
+          onClick={() => setShowAIChat(true)}
+          className="bg-purple-500 p-4 rounded-full shadow-lg hover:bg-purple-600 transition-colors"
+          title="Chat con AI"
+        >
+          <MessageSquare size={24} className="text-white" />
+        </button>
+
+        {/* Botón de Cámara */}
+        <button
+          onClick={() => fileInputRef.current?.click()}
+          disabled={isProcessingImage}
+          className="bg-purple-500 p-4 rounded-full shadow-lg hover:bg-purple-600 transition-colors disabled:opacity-50"
+          title="Subir imagen"
+        >
+          <Camera size={24} className="text-white" />
+        </button>
+      </div>
 
       {/* Loading de procesamiento de imagen */}
       {isProcessingImage && (
@@ -223,6 +239,11 @@ export function HomeView() {
       <EmailConfigModal 
         isOpen={showEmailConfig} 
         onClose={() => setShowEmailConfig(false)} 
+      />
+
+      <AIChatModal 
+        isOpen={showAIChat} 
+        onClose={() => setShowAIChat(false)} 
       />
 
       <style jsx>{`
