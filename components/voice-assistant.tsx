@@ -1,144 +1,244 @@
 "use client"
 
-import { useRef } from "react"
+import { useEffect, useState } from "react"
+import { Mic } from "lucide-react"
 
 interface VoiceAssistantProps {
   onStartListening: () => void
   onStopListening: () => void
   isListening: boolean
-  onLongPress: () => void
+  onLongPress?: () => void
+  status?: 'idle' | 'listening' | 'processing' | 'speaking'
 }
 
-export function VoiceAssistant({ onStartListening, onStopListening, isListening, onLongPress }: VoiceAssistantProps) {
-  const longPressTimer = useRef<NodeJS.Timeout | null>(null)
-  const isLongPress = useRef(false)
-
-  const handleClick = () => {
-    if (!isLongPress.current) {
-      if (isListening) {
-        onStopListening()
-      } else {
-        onStartListening()
-      }
-    }
-    isLongPress.current = false
-  }
+export function VoiceAssistant({ 
+  onStartListening, 
+  onStopListening, 
+  isListening, 
+  onLongPress,
+  status = 'idle'
+}: VoiceAssistantProps) {
+  const [pressTimer, setPressTimer] = useState<NodeJS.Timeout | null>(null)
 
   const handleMouseDown = () => {
-    isLongPress.current = false
-    longPressTimer.current = setTimeout(() => {
-      isLongPress.current = true
-      onLongPress()
-    }, 800)
+    const timer = setTimeout(() => {
+      if (onLongPress) {
+        onLongPress()
+      }
+    }, 2000)
+    setPressTimer(timer)
   }
 
   const handleMouseUp = () => {
-    if (longPressTimer.current) {
-      clearTimeout(longPressTimer.current)
-      longPressTimer.current = null
+    if (pressTimer) {
+      clearTimeout(pressTimer)
+      setPressTimer(null)
     }
   }
 
-  const handleMouseLeave = () => {
-    if (longPressTimer.current) {
-      clearTimeout(longPressTimer.current)
-      longPressTimer.current = null
+  const handleClick = () => {
+    if (isListening) {
+      onStopListening()
+    } else {
+      onStartListening()
     }
-    isLongPress.current = false
+  }
+
+  useEffect(() => {
+    return () => {
+      if (pressTimer) {
+        clearTimeout(pressTimer)
+      }
+    }
+  }, [pressTimer])
+
+  const getAnimationClass = () => {
+    switch (status) {
+      case 'listening':
+        return 'animate-pulse-listening'
+      case 'processing':
+        return 'animate-pulse-processing'
+      case 'speaking':
+        return 'animate-pulse-speaking'
+      default:
+        return 'hover:scale-105'
+    }
+  }
+
+  const getGlowColor = () => {
+    switch (status) {
+      case 'listening':
+        return 'shadow-blue-500/50'
+      case 'processing':
+        return 'shadow-purple-500/50'
+      case 'speaking':
+        return 'shadow-green-500/50'
+      default:
+        return 'shadow-purple-500/20'
+    }
   }
 
   return (
-    <div className="relative">
+    <>
       <button
         onClick={handleClick}
         onMouseDown={handleMouseDown}
         onMouseUp={handleMouseUp}
-        onMouseLeave={handleMouseLeave}
         onTouchStart={handleMouseDown}
         onTouchEnd={handleMouseUp}
-        className={`siri-orb w-20 h-20 relative cursor-pointer flex justify-center items-center ${
-          isListening ? "listening" : ""
-        }`}
+        className={`relative w-32 h-32 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center shadow-2xl ${getGlowColor()} transition-all duration-300 ${getAnimationClass()}`}
+        style={{
+          boxShadow: status !== 'idle' 
+            ? `0 0 ${status === 'listening' ? '40px' : status === 'processing' ? '30px' : '35px'} rgba(168, 85, 247, 0.4)`
+            : undefined
+        }}
       >
-        <div className="wave absolute border-2 border-solid rounded-full animate-pulse-wave-1"></div>
-        <div className="wave absolute border-2 border-solid rounded-full animate-pulse-wave-2"></div>
-        <div className="wave absolute border-2 border-solid rounded-full animate-pulse-wave-3"></div>
-        <div className="wave absolute border-2 border-solid rounded-full animate-pulse-wave-4"></div>
+        <Mic size={48} className="text-white" />
+        
+        {/* Ondas de audio para listening */}
+        {status === 'listening' && (
+          <>
+            <div className="absolute w-36 h-36 rounded-full border-2 border-blue-400 animate-ping-slow opacity-50"></div>
+            <div className="absolute w-40 h-40 rounded-full border-2 border-blue-300 animate-ping-slower opacity-30"></div>
+          </>
+        )}
+
+        {/* Ondas de procesamiento */}
+        {status === 'processing' && (
+          <>
+            <div className="absolute w-36 h-36 rounded-full border-2 border-purple-400 animate-spin-slow opacity-50"></div>
+            <div className="absolute w-32 h-32 rounded-full border-2 border-purple-300 animate-spin-slower opacity-30"></div>
+          </>
+        )}
+
+        {/* Ondas de habla */}
+        {status === 'speaking' && (
+          <>
+            <div className="absolute w-36 h-36 rounded-full border-2 border-green-400 animate-pulse opacity-50"></div>
+            <div className="absolute w-40 h-40 rounded-full border-2 border-green-300 animate-pulse-delay opacity-30"></div>
+          </>
+        )}
       </button>
 
       <style jsx>{`
-        .wave {
-          width: 100%;
-          height: 100%;
-        }
-        
-        .wave:nth-child(1) {
-          border-color: #8ab4f8;
-          animation-delay: 0s;
-        }
-        
-        .wave:nth-child(2) {
-          border-color: #f28b82;
-          animation-delay: 1s;
-        }
-        
-        .wave:nth-child(3) {
-          border-color: #fdd663;
-          animation-delay: 2s;
-        }
-        
-        .wave:nth-child(4) {
-          border-color: #81c995;
-          animation-delay: 3s;
-        }
-        
-        .siri-orb.listening .wave {
-          animation: listen 1.2s infinite ease-in-out !important;
-        }
-        
-        @keyframes pulse-wave {
-          0%, 100% { 
-            transform: scale(0.95); 
-            opacity: 1; 
+        @keyframes pulse-listening {
+          0%, 100% {
+            transform: scale(1);
+            opacity: 1;
           }
-          50% { 
-            transform: scale(1.4); 
-            opacity: 0; 
-          }
-          80% { 
-            transform: scale(1.4); 
-            opacity: 0; 
+          50% {
+            transform: scale(1.05);
+            opacity: 0.9;
           }
         }
-        
-        @keyframes listen {
-          0%, 100% { 
-            transform: scale(1); 
+
+        @keyframes pulse-processing {
+          0%, 100% {
+            transform: scale(1) rotate(0deg);
           }
-          50% { 
-            transform: scale(1.2); 
+          50% {
+            transform: scale(1.03) rotate(180deg);
           }
         }
-        
-        .animate-pulse-wave-1 {
-          animation: pulse-wave 4s infinite;
+
+        @keyframes pulse-speaking {
+          0%, 100% {
+            transform: scale(1);
+          }
+          25% {
+            transform: scale(1.05);
+          }
+          50% {
+            transform: scale(0.98);
+          }
+          75% {
+            transform: scale(1.05);
+          }
         }
-        
-        .animate-pulse-wave-2 {
-          animation: pulse-wave 4s infinite;
-          animation-delay: 1s;
+
+        @keyframes ping-slow {
+          0% {
+            transform: scale(1);
+            opacity: 0.5;
+          }
+          100% {
+            transform: scale(1.3);
+            opacity: 0;
+          }
         }
-        
-        .animate-pulse-wave-3 {
-          animation: pulse-wave 4s infinite;
-          animation-delay: 2s;
+
+        @keyframes ping-slower {
+          0% {
+            transform: scale(1);
+            opacity: 0.3;
+          }
+          100% {
+            transform: scale(1.5);
+            opacity: 0;
+          }
         }
-        
-        .animate-pulse-wave-4 {
-          animation: pulse-wave 4s infinite;
-          animation-delay: 3s;
+
+        @keyframes spin-slow {
+          from {
+            transform: rotate(0deg);
+          }
+          to {
+            transform: rotate(360deg);
+          }
+        }
+
+        @keyframes spin-slower {
+          from {
+            transform: rotate(360deg);
+          }
+          to {
+            transform: rotate(0deg);
+          }
+        }
+
+        @keyframes pulse-delay {
+          0%, 100% {
+            transform: scale(1);
+            opacity: 0.3;
+          }
+          50% {
+            transform: scale(1.1);
+            opacity: 0.5;
+          }
+        }
+
+        .animate-pulse-listening {
+          animation: pulse-listening 1.5s ease-in-out infinite;
+        }
+
+        .animate-pulse-processing {
+          animation: pulse-processing 2s ease-in-out infinite;
+        }
+
+        .animate-pulse-speaking {
+          animation: pulse-speaking 0.8s ease-in-out infinite;
+        }
+
+        .animate-ping-slow {
+          animation: ping-slow 1.5s cubic-bezier(0, 0, 0.2, 1) infinite;
+        }
+
+        .animate-ping-slower {
+          animation: ping-slower 2s cubic-bezier(0, 0, 0.2, 1) infinite;
+        }
+
+        .animate-spin-slow {
+          animation: spin-slow 3s linear infinite;
+        }
+
+        .animate-spin-slower {
+          animation: spin-slower 4s linear infinite;
+        }
+
+        .animate-pulse-delay {
+          animation: pulse-delay 1.5s ease-in-out infinite 0.3s;
         }
       `}</style>
-    </div>
+    </>
   )
 }

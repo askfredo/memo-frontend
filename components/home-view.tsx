@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from "react"
 import { VoiceAssistant } from "@/components/voice-assistant"
 import { EmailConfigModal } from "@/components/email-config-modal"
 import { api } from "@/lib/api"
-import { StickyNote, Calendar, Camera, Save } from "lucide-react"
+import { StickyNote, Calendar, Camera, Save, X } from "lucide-react"
 
 interface ConversationMessage {
   type: 'user' | 'assistant'
@@ -21,10 +21,8 @@ export function HomeView() {
   const fileInputRef = useRef<HTMLInputElement>(null)
   
   const [conversationMessages, setConversationMessages] = useState<ConversationMessage[]>([])
-  const [inactivityTimer, setInactivityTimer] = useState<NodeJS.Timeout | null>(null)
-  const [showSaveButton, setShowSaveButton] = useState(false)
-  const [isProcessing, setIsProcessing] = useState(false)
-  const [shouldAutoListen, setShouldAutoListen] = useState(false)
+  const [showSavePrompt, setShowSavePrompt] = useState(false)
+  const [assistantStatus, setAssistantStatus] = useState<'idle' | 'listening' | 'processing' | 'speaking'>('idle')
 
   const playNoteSound = () => {
     const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
@@ -89,25 +87,10 @@ export function HomeView() {
     }])
   }
 
-  const resetInactivityTimer = () => {
-    if (inactivityTimer) {
-      clearTimeout(inactivityTimer)
-    }
-    
-    const timer = setTimeout(() => {
-      if (conversationMessages.length > 0) {
-        setShowSaveButton(true)
-      }
-    }, 15000) // 15 segundos de inactividad
-    
-    setInactivityTimer(timer)
-  }
-
   const processVoiceInput = async (text: string) => {
     try {
-      setIsProcessing(true)
+      setAssistantStatus('processing')
       addMessage('user', text)
-      resetInactivityTimer()
 
       const response = await fetch('https://memo-backend-production.up.railway.app/api/assistant/process', {
         method: 'POST',
@@ -122,6 +105,7 @@ export function HomeView() {
 
       if (result.type === 'conversation') {
         addMessage('assistant', result.response)
+        setAssistantStatus('speaking')
         
         // Text to speech
         if ("speechSynthesis" in window) {
@@ -129,42 +113,62 @@ export function HomeView() {
           utterance.lang = "es-ES"
           utterance.rate = 1.1
           
+          utterance.onstart = () => setAssistantStatus('speaking')
           utterance.onend = () => {
-            setIsProcessing(false)
+            setAssistantStatus('idle')
             // Auto-reactivar micrófono después de hablar
             setTimeout(() => {
-              setShouldAutoListen(true)
+              setIsListening(true)
+              setAssistantStatus('listening')
             }, 500)
           }
           
           speechSynthesis.speak(utterance)
         } else {
-          setIsProcessing(false)
-          setTimeout(() => setShouldAutoListen(true), 500)
+          setAssistantStatus('idle')
+          setTimeout(() => {
+            setIsListening(true)
+            setAssistantStatus('listening')
+          }, 500)
+        }
+
+        // Mostrar prompt de guardar si el backend lo sugiere
+        if (result.shouldOfferSave) {
+          setTimeout(() => {
+            setShowSavePrompt(true)
+          }, 2000)
         }
       } else if (result.type === 'event_created') {
         setFeedbackType('calendar')
         playCalendarSound()
         addMessage('assistant', result.response)
         setShowFeedback(true)
-        setTimeout(() => setShowFeedback(false), 1500)
-        setIsProcessing(false)
-        setTimeout(() => setShouldAutoListen(true), 1500)
+        setTimeout(() => {
+          setShowFeedback(false)
+          setAssistantStatus('idle')
+          setTimeout(() => {
+            setIsListening(true)
+            setAssistantStatus('listening')
+          }, 500)
+        }, 1500)
       } else {
         setFeedbackType('note')
         playNoteSound()
         addMessage('assistant', result.response)
         setShowFeedback(true)
-        setTimeout(() => setShowFeedback(false), 1500)
-        setIsProcessing(false)
-        setTimeout(() => setShouldAutoListen(true), 1500)
+        setTimeout(() => {
+          setShowFeedback(false)
+          setAssistantStatus('idle')
+          setTimeout(() => {
+            setIsListening(true)
+            setAssistantStatus('listening')
+          }, 500)
+        }, 1500)
       }
-
-      resetInactivityTimer()
     } catch (error) {
       console.error('Error procesando voz:', error)
       addMessage('assistant', 'Lo siento, hubo un error.')
-      setIsProcessing(false)
+      setAssistantStatus('idle')
     }
   }
 
@@ -178,19 +182,26 @@ export function HomeView() {
       await api.saveConversation(formattedMessages)
       
       setConversationMessages([])
-      setShowSaveButton(false)
-      alert('Conversación guardada como nota')
+      setShowSavePrompt(false)
+      
+      // Feedback visual
+      const tempMsg = 'Conversación guardada'
+      addMessage('assistant', tempMsg)
+      setTimeout(() => {
+        setConversationMessages([])
+      }, 2000)
     } catch (error) {
       console.error('Error guardando conversación:', error)
     }
   }
 
+  const handleDismissSave = () => {
+    setShowSavePrompt(false)
+  }
+
   const handleClearConversation = () => {
     setConversationMessages([])
-    setShowSaveButton(false)
-    if (inactivityTimer) {
-      clearTimeout(inactivityTimer)
-    }
+    setShowSavePrompt(false)
   }
 
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -226,21 +237,16 @@ export function HomeView() {
     reader.readAsDataURL(file)
   }
 
-  // Auto-reactivar micrófono
-  useEffect(() => {
-    if (shouldAutoListen && !isProcessing) {
-      setShouldAutoListen(false)
-      setIsListening(true)
-    }
-  }, [shouldAutoListen, isProcessing])
-
   useEffect(() => {
     if (!isListening) return
+
+    setAssistantStatus('listening')
 
     const SpeechRecognition = window.SpeechRecognition || (window as any).webkitSpeechRecognition
     if (!SpeechRecognition) {
       console.error("Speech Recognition no soportado")
       setIsListening(false)
+      setAssistantStatus('idle')
       return
     }
 
@@ -258,6 +264,7 @@ export function HomeView() {
     recognition.onerror = (event: any) => {
       console.error("Error:", event.error)
       setIsListening(false)
+      setAssistantStatus('idle')
     }
 
     recognition.start()
@@ -277,10 +284,15 @@ export function HomeView() {
       <div className="flex-1 flex flex-col items-center justify-center px-4">
         <div className="relative mb-4">
           <VoiceAssistant
-            onStartListening={() => !isProcessing && setIsListening(true)}
+            onStartListening={() => {
+              if (assistantStatus === 'idle') {
+                setIsListening(true)
+              }
+            }}
             onStopListening={() => setIsListening(false)}
             isListening={isListening}
             onLongPress={() => setShowEmailConfig(true)}
+            status={assistantStatus}
           />
 
           {showFeedback && (
@@ -294,46 +306,11 @@ export function HomeView() {
               </div>
             </div>
           )}
-
-          {isListening && (
-            <div className="absolute -bottom-16 left-1/2 transform -translate-x-1/2 w-max">
-              <p className="text-blue-400 text-lg font-medium">Escuchando...</p>
-            </div>
-          )}
-
-          {isProcessing && (
-            <div className="absolute -bottom-16 left-1/2 transform -translate-x-1/2 w-max">
-              <p className="text-purple-400 text-lg font-medium">Procesando...</p>
-            </div>
-          )}
         </div>
 
-        {/* Conversación */}
-        {conversationMessages.length > 0 && (
-          <div className="w-full max-w-2xl bg-[#2d2e30] rounded-xl p-4 max-h-64 overflow-y-auto">
-            <div className="space-y-2">
-              {conversationMessages.map((msg, idx) => (
-                <div
-                  key={idx}
-                  className={`text-sm ${
-                    msg.type === 'user' 
-                      ? 'text-blue-300 text-right' 
-                      : 'text-gray-200 text-left'
-                  }`}
-                >
-                  <span className="font-semibold">
-                    {msg.type === 'user' ? 'Tú: ' : 'AI: '}
-                  </span>
-                  {msg.text}
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* Botón guardar conversación */}
-        {showSaveButton && (
-          <div className="mt-4 flex gap-2">
+        {/* Prompt para guardar conversación */}
+        {showSavePrompt && (
+          <div className="fixed bottom-32 left-1/2 transform -translate-x-1/2 bg-[#2d2e30] rounded-xl p-4 shadow-2xl z-50 flex gap-3">
             <button
               onClick={handleSaveConversation}
               className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg flex items-center gap-2"
@@ -342,10 +319,10 @@ export function HomeView() {
               Guardar conversación
             </button>
             <button
-              onClick={handleClearConversation}
-              className="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-lg"
+              onClick={handleDismissSave}
+              className="bg-gray-600 hover:bg-gray-700 text-white px-3 py-2 rounded-lg"
             >
-              Limpiar
+              <X size={18} />
             </button>
           </div>
         )}
