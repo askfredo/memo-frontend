@@ -2,7 +2,7 @@
 
 import type React from "react"
 import { useState, useEffect } from "react"
-import { Star, Hash, Plus, Edit, Lock } from "lucide-react"
+import { Star, Hash, Plus, Edit, Lock, LockOpen } from "lucide-react"
 import { api } from "@/lib/api"
 import { NoteEditorModal } from "@/components/note-editor-modal"
 import { ChecklistNoteCard } from "@/components/checklist-note-card"
@@ -26,6 +26,7 @@ export function NotesView() {
   const [isEditorOpen, setIsEditorOpen] = useState(false)
   const [editingNote, setEditingNote] = useState<Note | null>(null)
   const [showSecretNotes, setShowSecretNotes] = useState(false)
+  const [secretNotesUnlocked, setSecretNotesUnlocked] = useState(false)
 
   useEffect(() => {
     loadNotes()
@@ -35,7 +36,6 @@ export function NotesView() {
     try {
       setLoading(true)
       const result = await api.getNotes()
-      // Filtrar notas secretas
       const publicNotes = (result.notes || []).filter((note: Note) => 
         !note.hashtags?.includes('#secreto')
       )
@@ -144,10 +144,14 @@ export function NotesView() {
         <div className="flex gap-2">
           <button
             onClick={() => setShowSecretNotes(true)}
-            className="bg-yellow-500 hover:bg-yellow-600 text-black p-2 rounded-full transition-colors"
+            className={`${
+              secretNotesUnlocked 
+                ? 'bg-green-500 hover:bg-green-600' 
+                : 'bg-yellow-500 hover:bg-yellow-600'
+            } text-black p-2 rounded-full transition-colors`}
             title="Notas Secretas"
           >
-            <Lock size={20} />
+            {secretNotesUnlocked ? <LockOpen size={20} /> : <Lock size={20} />}
           </button>
           <button
             onClick={handleCreateNote}
@@ -226,7 +230,8 @@ export function NotesView() {
 
       <SecretNotesModal 
         isOpen={showSecretNotes} 
-        onClose={() => setShowSecretNotes(false)} 
+        onClose={() => setShowSecretNotes(false)}
+        onUnlock={() => setSecretNotesUnlocked(true)}
       />
     </div>
   )
