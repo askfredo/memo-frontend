@@ -195,6 +195,21 @@ export const api = {
     return response.json();
   },
 
+  // Smart Assistant con soporte para voz nativa
+  async processVoiceInput(data: {
+    message: string;
+    conversationHistory?: any[];
+    useNativeVoice?: boolean;
+    userId?: string;
+  }) {
+    const response = await fetch(`${API_URL}/assistant/process`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data)
+    });
+    return response.json();
+  },
+
   // Usuario
   async getUserProfile() {
     const response = await fetch(`${API_URL}/user/profile`);

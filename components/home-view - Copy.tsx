@@ -4,18 +4,12 @@ import { useState, useEffect, useRef } from "react"
 import { VoiceAssistant } from "@/components/voice-assistant"
 import { EmailConfigModal } from "@/components/email-config-modal"
 import { api } from "@/lib/api"
-import { StickyNote, Calendar, Camera, Save, X, Brain, Sparkles, MessageCircle } from "lucide-react"
+import { StickyNote, Calendar, Camera, Save, X } from "lucide-react"
 
 interface ConversationMessage {
   type: 'user' | 'assistant'
   text: string
   timestamp: Date
-}
-
-interface FloatingIcon {
-  id: string
-  icon: 'brain' | 'sparkles' | 'message'
-  x: number
 }
 
 export function HomeView() {
@@ -29,8 +23,6 @@ export function HomeView() {
   const [conversationMessages, setConversationMessages] = useState<ConversationMessage[]>([])
   const [showSavePrompt, setShowSavePrompt] = useState(false)
   const [assistantStatus, setAssistantStatus] = useState<'idle' | 'listening' | 'processing' | 'speaking'>('idle')
-  const [floatingIcons, setFloatingIcons] = useState<FloatingIcon[]>([])
-  const audioRef = useRef<HTMLAudioElement | null>(null)
 
   const playNoteSound = () => {
     const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
@@ -87,25 +79,6 @@ export function HomeView() {
     });
   }
 
-  const spawnFloatingIcon = () => {
-    const icons: Array<'brain' | 'sparkles' | 'message'> = ['brain', 'sparkles', 'message'];
-    const randomIcon = icons[Math.floor(Math.random() * icons.length)];
-    const randomX = Math.random() * 80 + 10; // 10-90% del ancho
-    
-    const newIcon: FloatingIcon = {
-      id: Date.now().toString() + Math.random(),
-      icon: randomIcon,
-      x: randomX
-    };
-
-    setFloatingIcons(prev => [...prev, newIcon]);
-
-    // Remover después de la animación (3s)
-    setTimeout(() => {
-      setFloatingIcons(prev => prev.filter(icon => icon.id !== newIcon.id));
-    }, 3000);
-  };
-
   const addMessage = (type: 'user' | 'assistant', text: string) => {
     setConversationMessages(prev => [...prev, {
       type,
@@ -113,64 +86,6 @@ export function HomeView() {
       timestamp: new Date()
     }])
   }
-
-  const playNativeAudio = (audioData: string, mimeType: string): Promise<void> => {
-    return new Promise((resolve, reject) => {
-      try {
-        // Convertir base64 a blob
-        const binaryString = atob(audioData);
-        const bytes = new Uint8Array(binaryString.length);
-        for (let i = 0; i < binaryString.length; i++) {
-          bytes[i] = binaryString.charCodeAt(i);
-        }
-        const blob = new Blob([bytes], { type: mimeType });
-        const url = URL.createObjectURL(blob);
-
-        if (audioRef.current) {
-          audioRef.current.pause();
-          audioRef.current.src = '';
-        }
-
-        const audio = new Audio(url);
-        audioRef.current = audio;
-
-        // Intervalo para generar iconos flotantes
-        let iconInterval: NodeJS.Timeout;
-
-        audio.onplay = () => {
-          setAssistantStatus('speaking');
-          // Generar iconos flotantes mientras habla
-          iconInterval = setInterval(() => {
-            spawnFloatingIcon();
-          }, 400);
-        };
-
-        audio.onended = () => {
-          setAssistantStatus('idle');
-          clearInterval(iconInterval);
-          URL.revokeObjectURL(url);
-          setTimeout(() => {
-            setIsListening(true);
-            setAssistantStatus('listening');
-          }, 500);
-          resolve();
-        };
-
-        audio.onerror = () => {
-          console.error('Error reproduciendo audio nativo');
-          setAssistantStatus('idle');
-          clearInterval(iconInterval);
-          reject(new Error('Error reproduciendo audio'));
-        };
-
-        audio.play();
-      } catch (error) {
-        console.error('Error creando audio:', error);
-        setAssistantStatus('idle');
-        reject(error);
-      }
-    });
-  };
 
   const processVoiceInput = async (text: string) => {
     try {
@@ -182,8 +97,7 @@ export function HomeView() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
           message: text,
-          conversationHistory: conversationMessages,
-          useNativeVoice: true
+          conversationHistory: conversationMessages
         })
       })
 
@@ -191,81 +105,38 @@ export function HomeView() {
 
       if (result.type === 'conversation') {
         addMessage('assistant', result.response)
+        setAssistantStatus('speaking')
         
-        // Si tiene audio nativo, reproducirlo
-        if (result.hasNativeAudio && result.audioData) {
-          try {
-            await playNativeAudio(result.audioData, result.audioMimeType);
-          } catch (audioError) {
-            console.error('Fallback a TTS del navegador');
-            // Fallback a TTS tradicional
-            if ("speechSynthesis" in window) {
-              const utterance = new SpeechSynthesisUtterance(result.response);
-              utterance.lang = "es-ES";
-              utterance.rate = 1.1;
-              
-              utterance.onstart = () => {
-                setAssistantStatus('speaking');
-                const interval = setInterval(() => {
-                  spawnFloatingIcon();
-                }, 400);
-                utterance.onend = () => {
-                  clearInterval(interval);
-                };
-              };
-              
-              utterance.onend = () => {
-                setAssistantStatus('idle');
-                setTimeout(() => {
-                  setIsListening(true);
-                  setAssistantStatus('listening');
-                }, 500);
-              };
-              
-              speechSynthesis.speak(utterance);
-            }
-          }
-        } else {
-          // Usar TTS del navegador
-          setAssistantStatus('speaking');
+        // Text to speech
+        if ("speechSynthesis" in window) {
+          const utterance = new SpeechSynthesisUtterance(result.response)
+          utterance.lang = "es-ES"
+          utterance.rate = 1.1
           
-          if ("speechSynthesis" in window) {
-            const utterance = new SpeechSynthesisUtterance(result.response);
-            utterance.lang = "es-ES";
-            utterance.rate = 1.1;
-            
-            utterance.onstart = () => {
-              setAssistantStatus('speaking');
-              const interval = setInterval(() => {
-                spawnFloatingIcon();
-              }, 400);
-              utterance.onend = () => {
-                clearInterval(interval);
-              };
-            };
-            
-            utterance.onend = () => {
-              setAssistantStatus('idle');
-              setTimeout(() => {
-                setIsListening(true);
-                setAssistantStatus('listening');
-              }, 500);
-            };
-            
-            speechSynthesis.speak(utterance);
-          } else {
-            setAssistantStatus('idle');
+          utterance.onstart = () => setAssistantStatus('speaking')
+          utterance.onend = () => {
+            setAssistantStatus('idle')
+            // Auto-reactivar micrófono después de hablar
             setTimeout(() => {
-              setIsListening(true);
-              setAssistantStatus('listening');
-            }, 500);
+              setIsListening(true)
+              setAssistantStatus('listening')
+            }, 500)
           }
+          
+          speechSynthesis.speak(utterance)
+        } else {
+          setAssistantStatus('idle')
+          setTimeout(() => {
+            setIsListening(true)
+            setAssistantStatus('listening')
+          }, 500)
         }
 
+        // Mostrar prompt de guardar si el backend lo sugiere
         if (result.shouldOfferSave) {
           setTimeout(() => {
-            setShowSavePrompt(true);
-          }, 2000);
+            setShowSavePrompt(true)
+          }, 2000)
         }
       } else if (result.type === 'event_created') {
         setFeedbackType('calendar')
@@ -279,18 +150,6 @@ export function HomeView() {
             setIsListening(true)
             setAssistantStatus('listening')
           }, 500)
-        }, 1500)
-      } else if (result.type === 'conversation_saved') {
-        setConversationMessages([])
-        setShowSavePrompt(false)
-        addMessage('assistant', result.response)
-        setFeedbackType('note')
-        playNoteSound()
-        setShowFeedback(true)
-        setTimeout(() => {
-          setShowFeedback(false)
-          setAssistantStatus('idle')
-          setConversationMessages([])
         }, 1500)
       } else {
         setFeedbackType('note')
@@ -325,6 +184,7 @@ export function HomeView() {
       setConversationMessages([])
       setShowSavePrompt(false)
       
+      // Feedback visual
       const tempMsg = 'Conversación guardada'
       addMessage('assistant', tempMsg)
       setTimeout(() => {
@@ -336,6 +196,11 @@ export function HomeView() {
   }
 
   const handleDismissSave = () => {
+    setShowSavePrompt(false)
+  }
+
+  const handleClearConversation = () => {
+    setConversationMessages([])
     setShowSavePrompt(false)
   }
 
@@ -410,20 +275,7 @@ export function HomeView() {
   }, [isListening])
 
   return (
-    <div className="h-full flex flex-col relative overflow-hidden">
-      {/* Iconos flotantes animados */}
-      {floatingIcons.map((icon) => (
-        <div
-          key={icon.id}
-          className="floating-icon"
-          style={{ left: `${icon.x}%` }}
-        >
-          {icon.icon === 'brain' && <Brain size={24} className="text-purple-400" />}
-          {icon.icon === 'sparkles' && <Sparkles size={24} className="text-yellow-400" />}
-          {icon.icon === 'message' && <MessageCircle size={24} className="text-blue-400" />}
-        </div>
-      ))}
-
+    <div className="h-full flex flex-col relative">
       <div className="text-center pt-8 pb-4">
         <h1 className="text-3xl font-bold text-white mb-2">MemoVoz</h1>
         <p className="text-gray-400">Tu asistente de recordatorios</p>
@@ -456,19 +308,18 @@ export function HomeView() {
           )}
         </div>
 
-        {/* Conversación - Texto de abajo para arriba con animación */}
+        {/* Conversación - Texto de abajo para arriba */}
         {conversationMessages.length > 0 && (
           <div className="w-full max-w-2xl mt-6">
-            <div className="space-y-3 flex flex-col-reverse max-h-80 overflow-y-auto px-4 custom-scrollbar">
+            <div className="space-y-3 flex flex-col-reverse max-h-80 overflow-y-auto px-4">
               {[...conversationMessages].reverse().map((msg, idx) => (
                 <div
                   key={conversationMessages.length - 1 - idx}
-                  className={`message-slide-up ${
+                  className={`${
                     msg.type === 'user' 
                       ? 'text-blue-300 text-right' 
                       : 'text-gray-200 text-left'
                   }`}
-                  style={{ animationDelay: `${idx * 0.1}s` }}
                 >
                   <p className="text-sm">
                     <span className="font-semibold">
@@ -482,19 +333,19 @@ export function HomeView() {
           </div>
         )}
 
-        {/* Prompt para guardar conversación con animación bounce */}
+        {/* Prompt para guardar conversación */}
         {showSavePrompt && (
-          <div className="fixed bottom-32 left-1/2 transform -translate-x-1/2 bg-[#2d2e30] rounded-xl p-4 shadow-2xl z-50 flex gap-3 bounce-in">
+          <div className="fixed bottom-32 left-1/2 transform -translate-x-1/2 bg-[#2d2e30] rounded-xl p-4 shadow-2xl z-50 flex gap-3">
             <button
               onClick={handleSaveConversation}
-              className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-all hover:scale-105"
+              className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg flex items-center gap-2"
             >
               <Save size={18} />
               Guardar conversación
             </button>
             <button
               onClick={handleDismissSave}
-              className="bg-gray-600 hover:bg-gray-700 text-white px-3 py-2 rounded-lg transition-all hover:scale-105"
+              className="bg-gray-600 hover:bg-gray-700 text-white px-3 py-2 rounded-lg"
             >
               <X size={18} />
             </button>
@@ -553,81 +404,6 @@ export function HomeView() {
         
         .animate-ping-scale {
           animation: ping-scale 1.5s ease-out;
-        }
-
-        @keyframes float-up {
-          0% {
-            transform: translateY(0) scale(1);
-            opacity: 1;
-          }
-          50% {
-            transform: translateY(-100px) scale(1.2);
-            opacity: 0.8;
-          }
-          100% {
-            transform: translateY(-200px) scale(0.8);
-            opacity: 0;
-          }
-        }
-
-        .floating-icon {
-          position: fixed;
-          bottom: 50%;
-          animation: float-up 3s ease-out forwards;
-          pointer-events: none;
-          z-index: 30;
-        }
-
-        @keyframes slide-up {
-          from {
-            opacity: 0;
-            transform: translateY(20px);
-          }
-          to {
-            opacity: 1;
-            transform: translateY(0);
-          }
-        }
-
-        .message-slide-up {
-          animation: slide-up 0.4s ease-out forwards;
-          opacity: 0;
-        }
-
-        @keyframes bounce-in {
-          0% {
-            transform: translate(-50%, 100px) scale(0.5);
-            opacity: 0;
-          }
-          50% {
-            transform: translate(-50%, -10px) scale(1.05);
-          }
-          100% {
-            transform: translate(-50%, 0) scale(1);
-            opacity: 1;
-          }
-        }
-
-        .bounce-in {
-          animation: bounce-in 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55) forwards;
-        }
-
-        .custom-scrollbar::-webkit-scrollbar {
-          width: 6px;
-        }
-
-        .custom-scrollbar::-webkit-scrollbar-track {
-          background: #2d2e30;
-          border-radius: 10px;
-        }
-
-        .custom-scrollbar::-webkit-scrollbar-thumb {
-          background: #4a4d50;
-          border-radius: 10px;
-        }
-
-        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-          background: #5a5d60;
         }
       `}</style>
     </div>
