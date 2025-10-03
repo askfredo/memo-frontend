@@ -24,10 +24,6 @@ export function HomeView() {
   const [showSavePrompt, setShowSavePrompt] = useState(false)
   const [assistantStatus, setAssistantStatus] = useState<'idle' | 'listening' | 'processing' | 'speaking'>('idle')
 
-  // Para el feedback flotante
-  const [showFloatingIcon, setShowFloatingIcon] = useState(false)
-  const [floatingIconType, setFloatingIconType] = useState<'note' | 'calendar'>('note')
-
   const playNoteSound = () => {
     const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
     const oscillator = audioContext.createOscillator();
@@ -83,56 +79,6 @@ export function HomeView() {
     });
   }
 
-  const playAudioResponse = async (audioBase64: string) => {
-    try {
-      const audioBlob = base64ToBlob(audioBase64, 'audio/pcm');
-      const audioUrl = URL.createObjectURL(audioBlob);
-      const audio = new Audio(audioUrl);
-      
-      audio.onplay = () => setAssistantStatus('speaking');
-      audio.onended = () => {
-        setAssistantStatus('idle');
-        URL.revokeObjectURL(audioUrl);
-        setTimeout(() => {
-          setIsListening(true);
-          setAssistantStatus('listening');
-        }, 500);
-      };
-      
-      await audio.play();
-    } catch (error) {
-      console.error('Error reproduciendo audio:', error);
-      setAssistantStatus('idle');
-      setTimeout(() => {
-        setIsListening(true);
-        setAssistantStatus('listening');
-      }, 500);
-    }
-  }
-
-  const base64ToBlob = (base64: string, mimeType: string): Blob => {
-    const byteCharacters = atob(base64);
-    const byteArrays = [];
-    
-    for (let offset = 0; offset < byteCharacters.length; offset += 512) {
-      const slice = byteCharacters.slice(offset, offset + 512);
-      const byteNumbers = new Array(slice.length);
-      for (let i = 0; i < slice.length; i++) {
-        byteNumbers[i] = slice.charCodeAt(i);
-      }
-      const byteArray = new Uint8Array(byteNumbers);
-      byteArrays.push(byteArray);
-    }
-    
-    return new Blob(byteArrays, { type: mimeType });
-  }
-
-  const showFloatingFeedback = (type: 'note' | 'calendar') => {
-    setFloatingIconType(type);
-    setShowFloatingIcon(true);
-    setTimeout(() => setShowFloatingIcon(false), 2000);
-  }
-
   const addMessage = (type: 'user' | 'assistant', text: string) => {
     setConversationMessages(prev => [...prev, {
       type,
@@ -146,7 +92,7 @@ export function HomeView() {
       setAssistantStatus('processing')
       addMessage('user', text)
 
-      const response = await fetch('https://memo-backend-production.up.railway.app/api/assistant/process-audio', {
+      const response = await fetch('https://memo-backend-production.up.railway.app/api/assistant/process', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
@@ -157,25 +103,27 @@ export function HomeView() {
 
       const result = await response.json()
 
-      if (result.type === 'conversation_saved') {
+      if (result.type === 'conversation') {
         addMessage('assistant', result.response)
-        playNoteSound()
-        showFloatingFeedback('note')
+        setAssistantStatus('speaking')
         
-        if (result.audioData) {
-          await playAudioResponse(result.audioData);
-        }
-        
-        setTimeout(() => {
-          setConversationMessages([])
-          setShowSavePrompt(false)
-          setAssistantStatus('idle')
-        }, 2000)
-      } else if (result.type === 'conversation') {
-        addMessage('assistant', result.response)
-        
-        if (result.audioData) {
-          await playAudioResponse(result.audioData);
+        // Text to speech
+        if ("speechSynthesis" in window) {
+          const utterance = new SpeechSynthesisUtterance(result.response)
+          utterance.lang = "es-ES"
+          utterance.rate = 1.1
+          
+          utterance.onstart = () => setAssistantStatus('speaking')
+          utterance.onend = () => {
+            setAssistantStatus('idle')
+            // Auto-reactivar micrófono después de hablar
+            setTimeout(() => {
+              setIsListening(true)
+              setAssistantStatus('listening')
+            }, 500)
+          }
+          
+          speechSynthesis.speak(utterance)
         } else {
           setAssistantStatus('idle')
           setTimeout(() => {
@@ -184,39 +132,38 @@ export function HomeView() {
           }, 500)
         }
 
+        // Mostrar prompt de guardar si el backend lo sugiere
         if (result.shouldOfferSave) {
           setTimeout(() => {
             setShowSavePrompt(true)
           }, 2000)
         }
       } else if (result.type === 'event_created') {
+        setFeedbackType('calendar')
         playCalendarSound()
-        showFloatingFeedback('calendar')
         addMessage('assistant', result.response)
-        
-        if (result.audioData) {
-          await playAudioResponse(result.audioData);
-        } else {
+        setShowFeedback(true)
+        setTimeout(() => {
+          setShowFeedback(false)
           setAssistantStatus('idle')
           setTimeout(() => {
             setIsListening(true)
             setAssistantStatus('listening')
           }, 500)
-        }
+        }, 1500)
       } else {
+        setFeedbackType('note')
         playNoteSound()
-        showFloatingFeedback('note')
         addMessage('assistant', result.response)
-        
-        if (result.audioData) {
-          await playAudioResponse(result.audioData);
-        } else {
+        setShowFeedback(true)
+        setTimeout(() => {
+          setShowFeedback(false)
           setAssistantStatus('idle')
           setTimeout(() => {
             setIsListening(true)
             setAssistantStatus('listening')
           }, 500)
-        }
+        }, 1500)
       }
     } catch (error) {
       console.error('Error procesando voz:', error)
@@ -237,6 +184,7 @@ export function HomeView() {
       setConversationMessages([])
       setShowSavePrompt(false)
       
+      // Feedback visual
       const tempMsg = 'Conversación guardada'
       addMessage('assistant', tempMsg)
       setTimeout(() => {
@@ -248,6 +196,11 @@ export function HomeView() {
   }
 
   const handleDismissSave = () => {
+    setShowSavePrompt(false)
+  }
+
+  const handleClearConversation = () => {
+    setConversationMessages([])
     setShowSavePrompt(false)
   }
 
@@ -266,12 +219,15 @@ export function HomeView() {
         const result = await api.createNoteFromImage(base64)
         
         if (result.type === 'event') {
+          setFeedbackType('calendar')
           playCalendarSound()
-          showFloatingFeedback('calendar')
         } else {
+          setFeedbackType('note')
           playNoteSound()
-          showFloatingFeedback('note')
         }
+
+        setShowFeedback(true)
+        setTimeout(() => setShowFeedback(false), 1500)
       } catch (error) {
         console.error('Error procesando imagen:', error)
       } finally {
@@ -319,7 +275,7 @@ export function HomeView() {
   }, [isListening])
 
   return (
-    <div className="h-full flex flex-col relative overflow-hidden">
+    <div className="h-full flex flex-col relative">
       <div className="text-center pt-8 pb-4">
         <h1 className="text-3xl font-bold text-white mb-2">MemoVoz</h1>
         <p className="text-gray-400">Tu asistente de recordatorios</p>
@@ -352,27 +308,14 @@ export function HomeView() {
           )}
         </div>
 
-        {/* Icono flotante de pensamiento */}
-        {showFloatingIcon && (
-          <div className="absolute top-20 right-10 animate-float-up-fade">
-            <div className={`bg-gradient-to-br ${floatingIconType === 'note' ? 'from-yellow-400 to-orange-500' : 'from-green-400 to-blue-500'} p-4 rounded-2xl shadow-2xl`}>
-              {floatingIconType === 'note' ? (
-                <StickyNote size={32} className="text-white" />
-              ) : (
-                <Calendar size={32} className="text-white" />
-              )}
-            </div>
-          </div>
-        )}
-
-        {/* Conversación */}
+        {/* Conversación - Texto de abajo para arriba */}
         {conversationMessages.length > 0 && (
           <div className="w-full max-w-2xl mt-6">
             <div className="space-y-3 flex flex-col-reverse max-h-80 overflow-y-auto px-4">
               {[...conversationMessages].reverse().map((msg, idx) => (
                 <div
                   key={conversationMessages.length - 1 - idx}
-                  className={`animate-slide-up ${
+                  className={`${
                     msg.type === 'user' 
                       ? 'text-blue-300 text-right' 
                       : 'text-gray-200 text-left'
@@ -390,19 +333,19 @@ export function HomeView() {
           </div>
         )}
 
-        {/* Prompt para guardar */}
+        {/* Prompt para guardar conversación */}
         {showSavePrompt && (
-          <div className="fixed bottom-32 left-1/2 transform -translate-x-1/2 bg-[#2d2e30] rounded-xl p-4 shadow-2xl z-50 flex gap-3 animate-bounce-in">
+          <div className="fixed bottom-32 left-1/2 transform -translate-x-1/2 bg-[#2d2e30] rounded-xl p-4 shadow-2xl z-50 flex gap-3">
             <button
               onClick={handleSaveConversation}
-              className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-all hover:scale-105"
+              className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg flex items-center gap-2"
             >
               <Save size={18} />
               Guardar conversación
             </button>
             <button
               onClick={handleDismissSave}
-              className="bg-gray-600 hover:bg-gray-700 text-white px-3 py-2 rounded-lg transition-all hover:scale-105"
+              className="bg-gray-600 hover:bg-gray-700 text-white px-3 py-2 rounded-lg"
             >
               <X size={18} />
             </button>
@@ -410,7 +353,7 @@ export function HomeView() {
         )}
       </div>
 
-      {/* Botón de cámara */}
+      {/* Botón flotante de cámara */}
       <input
         ref={fileInputRef}
         type="file"
@@ -423,7 +366,7 @@ export function HomeView() {
       <button
         onClick={() => fileInputRef.current?.click()}
         disabled={isProcessingImage}
-        className="fixed bottom-24 right-4 bg-purple-500 p-4 rounded-full shadow-lg hover:bg-purple-600 transition-all hover:scale-110 disabled:opacity-50 z-40"
+        className="fixed bottom-24 right-4 bg-purple-500 p-4 rounded-full shadow-lg hover:bg-purple-600 transition-colors disabled:opacity-50 z-40"
         title="Subir imagen"
       >
         <Camera size={24} className="text-white" />
@@ -458,63 +401,9 @@ export function HomeView() {
             opacity: 0;
           }
         }
-
-        @keyframes float-up-fade {
-          0% {
-            transform: translateY(20px) scale(0.8);
-            opacity: 0;
-          }
-          20% {
-            opacity: 1;
-          }
-          80% {
-            opacity: 1;
-          }
-          100% {
-            transform: translateY(-100px) scale(1.2);
-            opacity: 0;
-          }
-        }
-
-        @keyframes slide-up {
-          from {
-            transform: translateY(10px);
-            opacity: 0;
-          }
-          to {
-            transform: translateY(0);
-            opacity: 1;
-          }
-        }
-
-        @keyframes bounce-in {
-          0% {
-            transform: translateX(-50%) scale(0.8);
-            opacity: 0;
-          }
-          50% {
-            transform: translateX(-50%) scale(1.05);
-          }
-          100% {
-            transform: translateX(-50%) scale(1);
-            opacity: 1;
-          }
-        }
         
         .animate-ping-scale {
           animation: ping-scale 1.5s ease-out;
-        }
-
-        .animate-float-up-fade {
-          animation: float-up-fade 2s ease-out forwards;
-        }
-
-        .animate-slide-up {
-          animation: slide-up 0.3s ease-out;
-        }
-
-        .animate-bounce-in {
-          animation: bounce-in 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
         }
       `}</style>
     </div>
