@@ -59,59 +59,118 @@ export function VoiceAssistant({
         onMouseUp={handleMouseUp}
         onTouchStart={handleMouseDown}
         onTouchEnd={handleMouseUp}
-        className="relative w-40 h-40 rounded-full focus:outline-none"
+        className="relative w-56 h-56 flex items-center justify-center focus:outline-none group"
       >
-        {/* Fondo base */}
+        {/* Anillo exterior pulsante */}
         <div className={`absolute inset-0 rounded-full transition-all duration-500 ${
-          status === 'idle' ? 'bg-gradient-to-br from-purple-500/30 to-pink-500/30' :
-          status === 'listening' ? 'bg-gradient-to-br from-blue-500/40 to-cyan-500/40' :
-          status === 'processing' ? 'bg-gradient-to-br from-purple-500/40 to-pink-500/40' :
-          'bg-gradient-to-br from-green-500/40 to-emerald-500/40'
+          status === 'idle' ? 'bg-gradient-to-br from-indigo-500/10 to-purple-500/10' :
+          status === 'listening' ? 'bg-gradient-to-br from-blue-500/20 to-cyan-500/20 animate-pulse-slow' :
+          status === 'processing' ? 'bg-gradient-to-br from-purple-500/20 to-pink-500/20 animate-pulse-slow' :
+          'bg-gradient-to-br from-green-500/20 to-emerald-500/20 animate-pulse-slow'
         }`}></div>
 
-        {/* Ondas animadas */}
+        {/* Ondas expansivas para listening */}
         {status === 'listening' && (
           <>
-            <div className="wave-ring wave-1"></div>
-            <div className="wave-ring wave-2"></div>
-            <div className="wave-ring wave-3"></div>
+            <div className="absolute inset-0 rounded-full border-2 border-blue-400/30 animate-ping-slow"></div>
+            <div className="absolute inset-0 rounded-full border-2 border-blue-400/20 animate-ping-slower"></div>
           </>
         )}
 
+        {/* Ondas para speaking */}
         {status === 'speaking' && (
           <>
-            <div className="speak-ring speak-1"></div>
-            <div className="speak-ring speak-2"></div>
-            <div className="speak-ring speak-3"></div>
+            <div className="absolute inset-0 rounded-full border-2 border-green-400/30 animate-pulse-ring"></div>
+            <div className="absolute inset-0 rounded-full border-2 border-green-400/20 animate-pulse-ring-delayed"></div>
           </>
         )}
 
-        {/* Círculo central */}
-        <div className="absolute inset-0 flex items-center justify-center">
-          <div className={`w-24 h-24 rounded-full backdrop-blur-xl transition-all duration-300 ${
-            status === 'idle' ? 'bg-white/10 scale-100' :
-            status === 'listening' ? 'bg-blue-500/20 scale-110' :
-            status === 'processing' ? 'bg-purple-500/20 scale-105 animate-pulse' :
-            'bg-green-500/20 scale-110'
-          }`}>
-            <div className="w-full h-full rounded-full flex items-center justify-center">
-              {/* Punto central */}
-              <div className={`rounded-full transition-all duration-300 ${
-                status === 'idle' ? 'w-4 h-4 bg-white/60' :
-                status === 'listening' ? 'w-5 h-5 bg-blue-400 animate-pulse' :
-                status === 'processing' ? 'w-4 h-4 bg-purple-400 animate-spin-slow' :
-                'w-5 h-5 bg-green-400'
-              }`}></div>
-            </div>
+        {/* Círculo principal con blur */}
+        <div className="relative z-10 w-44 h-44 rounded-full backdrop-blur-2xl bg-white/5 border border-white/10 flex items-center justify-center shadow-2xl transition-all duration-500 group-hover:scale-105">
+          {/* Gradiente interior */}
+          <div className={`absolute inset-4 rounded-full transition-all duration-500 ${
+            status === 'idle' ? 'bg-gradient-to-br from-indigo-500/20 to-purple-500/20' :
+            status === 'listening' ? 'bg-gradient-to-br from-blue-500/30 to-cyan-500/30' :
+            status === 'processing' ? 'bg-gradient-to-br from-purple-500/30 to-pink-500/30' :
+            'bg-gradient-to-br from-green-500/30 to-emerald-500/30'
+          }`}></div>
+
+          {/* Círculo central con icono */}
+          <div className="relative z-20 w-28 h-28 rounded-full bg-white/10 backdrop-blur-xl border border-white/20 flex items-center justify-center shadow-inner">
+            {status === 'idle' && (
+              <div className="w-12 h-12 rounded-full bg-gradient-to-br from-indigo-400 to-purple-400 shadow-lg"></div>
+            )}
+            
+            {status === 'listening' && (
+              <div className="flex items-center justify-center gap-1">
+                <div className="w-1.5 h-8 bg-blue-400 rounded-full animate-wave-1"></div>
+                <div className="w-1.5 h-12 bg-blue-400 rounded-full animate-wave-2"></div>
+                <div className="w-1.5 h-6 bg-blue-400 rounded-full animate-wave-3"></div>
+                <div className="w-1.5 h-10 bg-blue-400 rounded-full animate-wave-4"></div>
+                <div className="w-1.5 h-8 bg-blue-400 rounded-full animate-wave-5"></div>
+              </div>
+            )}
+
+            {status === 'processing' && (
+              <div className="w-12 h-12 rounded-full border-4 border-purple-400 border-t-transparent animate-spin"></div>
+            )}
+
+            {status === 'speaking' && (
+              <div className="flex items-center justify-center gap-1">
+                <div className="w-1.5 h-10 bg-green-400 rounded-full animate-speak-1"></div>
+                <div className="w-1.5 h-14 bg-green-400 rounded-full animate-speak-2"></div>
+                <div className="w-1.5 h-8 bg-green-400 rounded-full animate-speak-3"></div>
+                <div className="w-1.5 h-12 bg-green-400 rounded-full animate-speak-4"></div>
+                <div className="w-1.5 h-10 bg-green-400 rounded-full animate-speak-5"></div>
+              </div>
+            )}
           </div>
+        </div>
+
+        {/* Texto de estado */}
+        <div className="absolute -bottom-12 left-1/2 transform -translate-x-1/2 whitespace-nowrap">
+          <p className="text-white/60 text-sm font-light tracking-wide">
+            {status === 'idle' && 'Toca para hablar'}
+            {status === 'listening' && 'Escuchando...'}
+            {status === 'processing' && 'Pensando...'}
+            {status === 'speaking' && 'Hablando...'}
+          </p>
         </div>
       </button>
 
       <style jsx>{`
-        @keyframes wave-expand {
+        @keyframes pulse-slow {
+          0%, 100% {
+            opacity: 1;
+          }
+          50% {
+            opacity: 0.5;
+          }
+        }
+
+        .animate-pulse-slow {
+          animation: pulse-slow 3s ease-in-out infinite;
+        }
+
+        @keyframes ping-slow {
           0% {
-            transform: scale(0.8);
-            opacity: 0.8;
+            transform: scale(1);
+            opacity: 0.5;
+          }
+          100% {
+            transform: scale(1.3);
+            opacity: 0;
+          }
+        }
+
+        .animate-ping-slow {
+          animation: ping-slow 2s cubic-bezier(0, 0, 0.2, 1) infinite;
+        }
+
+        @keyframes ping-slower {
+          0% {
+            transform: scale(1);
+            opacity: 0.3;
           }
           100% {
             transform: scale(1.5);
@@ -119,68 +178,88 @@ export function VoiceAssistant({
           }
         }
 
-        .wave-ring {
-          position: absolute;
-          inset: -20px;
-          border: 2px solid rgba(59, 130, 246, 0.5);
-          border-radius: 50%;
-          animation: wave-expand 2s ease-out infinite;
+        .animate-ping-slower {
+          animation: ping-slower 2.5s cubic-bezier(0, 0, 0.2, 1) infinite 0.5s;
         }
 
-        .wave-1 {
-          animation-delay: 0s;
-        }
-
-        .wave-2 {
-          animation-delay: 0.5s;
-        }
-
-        .wave-3 {
-          animation-delay: 1s;
-        }
-
-        @keyframes speak-pulse {
+        @keyframes pulse-ring {
           0%, 100% {
-            transform: scale(0.95);
-            opacity: 0.6;
+            transform: scale(1);
+            opacity: 0.4;
           }
           50% {
-            transform: scale(1.2);
-            opacity: 0.3;
+            transform: scale(1.1);
+            opacity: 0.2;
           }
         }
 
-        .speak-ring {
-          position: absolute;
-          inset: -10px;
-          border: 3px solid rgba(34, 197, 94, 0.4);
-          border-radius: 50%;
-          animation: speak-pulse 1.5s ease-in-out infinite;
+        .animate-pulse-ring {
+          animation: pulse-ring 1.5s ease-in-out infinite;
         }
 
-        .speak-1 {
-          animation-delay: 0s;
+        .animate-pulse-ring-delayed {
+          animation: pulse-ring 1.5s ease-in-out infinite 0.3s;
         }
 
-        .speak-2 {
-          animation-delay: 0.3s;
-        }
-
-        .speak-3 {
-          animation-delay: 0.6s;
-        }
-
-        @keyframes spin-slow {
-          from {
-            transform: rotate(0deg);
+        @keyframes wave {
+          0%, 100% {
+            transform: scaleY(0.5);
           }
-          to {
-            transform: rotate(360deg);
+          50% {
+            transform: scaleY(1);
           }
         }
 
-        .animate-spin-slow {
-          animation: spin-slow 2s linear infinite;
+        .animate-wave-1 {
+          animation: wave 0.8s ease-in-out infinite;
+        }
+
+        .animate-wave-2 {
+          animation: wave 0.8s ease-in-out infinite 0.1s;
+        }
+
+        .animate-wave-3 {
+          animation: wave 0.8s ease-in-out infinite 0.2s;
+        }
+
+        .animate-wave-4 {
+          animation: wave 0.8s ease-in-out infinite 0.3s;
+        }
+
+        .animate-wave-5 {
+          animation: wave 0.8s ease-in-out infinite 0.4s;
+        }
+
+        @keyframes speak {
+          0%, 100% {
+            transform: scaleY(0.6);
+          }
+          25% {
+            transform: scaleY(1);
+          }
+          75% {
+            transform: scaleY(0.8);
+          }
+        }
+
+        .animate-speak-1 {
+          animation: speak 0.6s ease-in-out infinite;
+        }
+
+        .animate-speak-2 {
+          animation: speak 0.6s ease-in-out infinite 0.1s;
+        }
+
+        .animate-speak-3 {
+          animation: speak 0.6s ease-in-out infinite 0.2s;
+        }
+
+        .animate-speak-4 {
+          animation: speak 0.6s ease-in-out infinite 0.3s;
+        }
+
+        .animate-speak-5 {
+          animation: speak 0.6s ease-in-out infinite 0.4s;
         }
       `}</style>
     </>
