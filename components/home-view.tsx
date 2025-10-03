@@ -31,6 +31,7 @@ export function HomeView() {
   const [assistantStatus, setAssistantStatus] = useState<'idle' | 'listening' | 'processing' | 'speaking'>('idle')
   const [floatingIcons, setFloatingIcons] = useState<FloatingIcon[]>([])
   const audioRef = useRef<HTMLAudioElement | null>(null)
+  const iconIntervalRef = useRef<NodeJS.Timeout | null>(null)
 
   const playNoteSound = () => {
     const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
@@ -90,7 +91,7 @@ export function HomeView() {
   const spawnFloatingIcon = () => {
     const icons: Array<'brain' | 'sparkles' | 'message'> = ['brain', 'sparkles', 'message'];
     const randomIcon = icons[Math.floor(Math.random() * icons.length)];
-    const randomX = Math.random() * 80 + 10; // 10-90% del ancho
+    const randomX = Math.random() * 80 + 10;
     
     const newIcon: FloatingIcon = {
       id: Date.now().toString() + Math.random(),
@@ -100,16 +101,31 @@ export function HomeView() {
 
     setFloatingIcons(prev => [...prev, newIcon]);
 
-    // Remover después de la animación (3s)
     setTimeout(() => {
       setFloatingIcons(prev => prev.filter(icon => icon.id !== newIcon.id));
     }, 3000);
   };
 
+  const stopFloatingIcons = () => {
+    if (iconIntervalRef.current) {
+      clearInterval(iconIntervalRef.current);
+      iconIntervalRef.current = null;
+    }
+  };
+
+  const startFloatingIcons = () => {
+    stopFloatingIcons();
+    iconIntervalRef.current = setInterval(() => {
+      spawnFloatingIcon();
+    }, 400);
+  };
+
   const addMessage = (type: 'user' | 'assistant', text: string) => {
+    if (!text || text.trim() === '') return; // Evitar mensajes vacíos
+    
     setConversationMessages(prev => [...prev, {
       type,
-      text,
+      text: text.trim(),
       timestamp: new Date()
     }])
   }
@@ -117,7 +133,8 @@ export function HomeView() {
   const playNativeAudio = (audioData: string, mimeType: string): Promise<void> => {
     return new Promise((resolve, reject) => {
       try {
-        // Convertir base64 a blob
+        console.log('🔊 Reproduciendo audio nativo...');
+        
         const binaryString = atob(audioData);
         const bytes = new Uint8Array(binaryString.length);
         for (let i = 0; i < binaryString.length; i++) {
@@ -134,20 +151,16 @@ export function HomeView() {
         const audio = new Audio(url);
         audioRef.current = audio;
 
-        // Intervalo para generar iconos flotantes
-        let iconInterval: NodeJS.Timeout;
-
         audio.onplay = () => {
+          console.log('▶️ Audio iniciado');
           setAssistantStatus('speaking');
-          // Generar iconos flotantes mientras habla
-          iconInterval = setInterval(() => {
-            spawnFloatingIcon();
-          }, 400);
+          startFloatingIcons();
         };
 
         audio.onended = () => {
+          console.log('⏹️ Audio finalizado');
           setAssistantStatus('idle');
-          clearInterval(iconInterval);
+          stopFloatingIcons();
           URL.revokeObjectURL(url);
           setTimeout(() => {
             setIsListening(true);
@@ -156,17 +169,22 @@ export function HomeView() {
           resolve();
         };
 
-        audio.onerror = () => {
-          console.error('Error reproduciendo audio nativo');
+        audio.onerror = (e) => {
+          console.error('❌ Error reproduciendo audio:', e);
           setAssistantStatus('idle');
-          clearInterval(iconInterval);
+          stopFloatingIcons();
+          URL.revokeObjectURL(url);
           reject(new Error('Error reproduciendo audio'));
         };
 
-        audio.play();
+        audio.play().catch(err => {
+          console.error('❌ Error en play():', err);
+          reject(err);
+        });
       } catch (error) {
-        console.error('Error creando audio:', error);
+        console.error('❌ Error creando audio:', error);
         setAssistantStatus('idle');
+        stopFloatingIcons();
         reject(error);
       }
     });
@@ -174,6 +192,7 @@ export function HomeView() {
 
   const processVoiceInput = async (text: string) => {
     try {
+      console.log('🎤 Procesando:', text);
       setAssistantStatus('processing')
       addMessage('user', text)
 
@@ -187,79 +206,33 @@ export function HomeView() {
         })
       })
 
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
       const result = await response.json()
+      console.log('📦 Resultado:', result);
 
       if (result.type === 'conversation') {
+        if (!result.response || result.response.trim() === '') {
+          throw new Error('Respuesta vacía del servidor');
+        }
+
         addMessage('assistant', result.response)
         
-        // Si tiene audio nativo, reproducirlo
+        // Si tiene audio nativo
         if (result.hasNativeAudio && result.audioData) {
+          console.log('🎵 Audio nativo disponible');
           try {
             await playNativeAudio(result.audioData, result.audioMimeType);
           } catch (audioError) {
-            console.error('Fallback a TTS del navegador');
+            console.error('⚠️ Fallback a TTS del navegador:', audioError);
             // Fallback a TTS tradicional
-            if ("speechSynthesis" in window) {
-              const utterance = new SpeechSynthesisUtterance(result.response);
-              utterance.lang = "es-ES";
-              utterance.rate = 1.1;
-              
-              utterance.onstart = () => {
-                setAssistantStatus('speaking');
-                const interval = setInterval(() => {
-                  spawnFloatingIcon();
-                }, 400);
-                utterance.onend = () => {
-                  clearInterval(interval);
-                };
-              };
-              
-              utterance.onend = () => {
-                setAssistantStatus('idle');
-                setTimeout(() => {
-                  setIsListening(true);
-                  setAssistantStatus('listening');
-                }, 500);
-              };
-              
-              speechSynthesis.speak(utterance);
-            }
+            fallbackToTTS(result.response);
           }
         } else {
-          // Usar TTS del navegador
-          setAssistantStatus('speaking');
-          
-          if ("speechSynthesis" in window) {
-            const utterance = new SpeechSynthesisUtterance(result.response);
-            utterance.lang = "es-ES";
-            utterance.rate = 1.1;
-            
-            utterance.onstart = () => {
-              setAssistantStatus('speaking');
-              const interval = setInterval(() => {
-                spawnFloatingIcon();
-              }, 400);
-              utterance.onend = () => {
-                clearInterval(interval);
-              };
-            };
-            
-            utterance.onend = () => {
-              setAssistantStatus('idle');
-              setTimeout(() => {
-                setIsListening(true);
-                setAssistantStatus('listening');
-              }, 500);
-            };
-            
-            speechSynthesis.speak(utterance);
-          } else {
-            setAssistantStatus('idle');
-            setTimeout(() => {
-              setIsListening(true);
-              setAssistantStatus('listening');
-            }, 500);
-          }
+          console.log('🔤 Usando TTS del navegador');
+          fallbackToTTS(result.response);
         }
 
         if (result.shouldOfferSave) {
@@ -295,7 +268,7 @@ export function HomeView() {
       } else {
         setFeedbackType('note')
         playNoteSound()
-        addMessage('assistant', result.response)
+        addMessage('assistant', result.response || 'Nota guardada')
         setShowFeedback(true)
         setTimeout(() => {
           setShowFeedback(false)
@@ -307,11 +280,49 @@ export function HomeView() {
         }, 1500)
       }
     } catch (error) {
-      console.error('Error procesando voz:', error)
-      addMessage('assistant', 'Lo siento, hubo un error.')
+      console.error('❌ Error procesando voz:', error)
+      addMessage('assistant', 'Lo siento, hubo un error. Intenta de nuevo.')
       setAssistantStatus('idle')
+      stopFloatingIcons()
+      // Reactivar después de error
+      setTimeout(() => {
+        setIsListening(true)
+        setAssistantStatus('listening')
+      }, 1500)
     }
   }
+
+  const fallbackToTTS = (text: string) => {
+    if ("speechSynthesis" in window) {
+      const utterance = new SpeechSynthesisUtterance(text);
+      utterance.lang = "es-ES";
+      utterance.rate = 1.1;
+      
+      utterance.onstart = () => {
+        setAssistantStatus('speaking');
+        startFloatingIcons();
+      };
+      
+      utterance.onend = () => {
+        setAssistantStatus('idle');
+        stopFloatingIcons();
+        setTimeout(() => {
+          setIsListening(true);
+          setAssistantStatus('listening');
+        }, 500);
+      };
+
+      utterance.onerror = () => {
+        setAssistantStatus('idle');
+        stopFloatingIcons();
+      };
+      
+      speechSynthesis.speak(utterance);
+    } else {
+      setAssistantStatus('idle');
+      stopFloatingIcons();
+    }
+  };
 
   const handleSaveConversation = async () => {
     try {
@@ -392,12 +403,13 @@ export function HomeView() {
 
     recognition.onresult = (event: any) => {
       const transcript = event.results[0][0].transcript
+      console.log('📝 Transcrito:', transcript);
       processVoiceInput(transcript)
       setIsListening(false)
     }
 
     recognition.onerror = (event: any) => {
-      console.error("Error:", event.error)
+      console.error("❌ Error recognition:", event.error)
       setIsListening(false)
       setAssistantStatus('idle')
     }
@@ -408,6 +420,17 @@ export function HomeView() {
       recognition.stop()
     }
   }, [isListening])
+
+  // Cleanup al desmontar
+  useEffect(() => {
+    return () => {
+      stopFloatingIcons()
+      if (audioRef.current) {
+        audioRef.current.pause()
+        audioRef.current.src = ''
+      }
+    }
+  }, [])
 
   return (
     <div className="h-full flex flex-col relative overflow-hidden">
@@ -456,7 +479,7 @@ export function HomeView() {
           )}
         </div>
 
-        {/* Conversación - Texto de abajo para arriba con animación */}
+        {/* Conversación */}
         {conversationMessages.length > 0 && (
           <div className="w-full max-w-2xl mt-6">
             <div className="space-y-3 flex flex-col-reverse max-h-80 overflow-y-auto px-4 custom-scrollbar">
@@ -482,7 +505,7 @@ export function HomeView() {
           </div>
         )}
 
-        {/* Prompt para guardar conversación con animación bounce */}
+        {/* Prompt para guardar conversación */}
         {showSavePrompt && (
           <div className="fixed bottom-32 left-1/2 transform -translate-x-1/2 bg-[#2d2e30] rounded-xl p-4 shadow-2xl z-50 flex gap-3 bounce-in">
             <button

@@ -1,7 +1,6 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { Mic } from "lucide-react"
 
 interface VoiceAssistantProps {
   onStartListening: () => void
@@ -52,29 +51,16 @@ export function VoiceAssistant({
     }
   }, [pressTimer])
 
-  const getAnimationClass = () => {
+  const getStatusColor = () => {
     switch (status) {
       case 'listening':
-        return 'animate-pulse-listening'
+        return 'from-blue-500 to-cyan-500'
       case 'processing':
-        return 'animate-pulse-processing'
+        return 'from-purple-500 to-pink-500'
       case 'speaking':
-        return 'animate-pulse-speaking'
+        return 'from-green-500 to-emerald-500'
       default:
-        return 'hover:scale-105'
-    }
-  }
-
-  const getGlowColor = () => {
-    switch (status) {
-      case 'listening':
-        return 'shadow-blue-500/50'
-      case 'processing':
-        return 'shadow-purple-500/50'
-      case 'speaking':
-        return 'shadow-green-500/50'
-      default:
-        return 'shadow-purple-500/20'
+        return 'from-purple-500 to-pink-500'
     }
   }
 
@@ -86,157 +72,140 @@ export function VoiceAssistant({
         onMouseUp={handleMouseUp}
         onTouchStart={handleMouseDown}
         onTouchEnd={handleMouseUp}
-        className={`relative w-32 h-32 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center shadow-2xl ${getGlowColor()} transition-all duration-300 ${getAnimationClass()}`}
-        style={{
-          boxShadow: status !== 'idle' 
-            ? `0 0 ${status === 'listening' ? '40px' : status === 'processing' ? '30px' : '35px'} rgba(168, 85, 247, 0.4)`
-            : undefined
-        }}
+        className={`relative w-32 h-32 rounded-full bg-gradient-to-br ${getStatusColor()} flex items-center justify-center shadow-2xl transition-all duration-300 overflow-hidden`}
       >
-        <Mic size={48} className="text-white" />
-        
-        {/* Ondas de audio para listening */}
+        {/* Ondas animadas estilo Siri */}
         {status === 'listening' && (
-          <>
-            <div className="absolute w-36 h-36 rounded-full border-2 border-blue-400 animate-ping-slow opacity-50"></div>
-            <div className="absolute w-40 h-40 rounded-full border-2 border-blue-300 animate-ping-slower opacity-30"></div>
-          </>
+          <div className="absolute inset-0 flex items-center justify-center">
+            <div className="siri-wave wave-1"></div>
+            <div className="siri-wave wave-2"></div>
+            <div className="siri-wave wave-3"></div>
+            <div className="siri-wave wave-4"></div>
+            <div className="siri-wave wave-5"></div>
+          </div>
         )}
 
-        {/* Ondas de procesamiento */}
-        {status === 'processing' && (
-          <>
-            <div className="absolute w-36 h-36 rounded-full border-2 border-purple-400 animate-spin-slow opacity-50"></div>
-            <div className="absolute w-32 h-32 rounded-full border-2 border-purple-300 animate-spin-slower opacity-30"></div>
-          </>
-        )}
-
-        {/* Ondas de habla */}
         {status === 'speaking' && (
-          <>
-            <div className="absolute w-36 h-36 rounded-full border-2 border-green-400 animate-pulse opacity-50"></div>
-            <div className="absolute w-40 h-40 rounded-full border-2 border-green-300 animate-pulse-delay opacity-30"></div>
-          </>
+          <div className="absolute inset-0 flex items-center justify-center">
+            <div className="siri-wave-speak wave-1"></div>
+            <div className="siri-wave-speak wave-2"></div>
+            <div className="siri-wave-speak wave-3"></div>
+            <div className="siri-wave-speak wave-4"></div>
+            <div className="siri-wave-speak wave-5"></div>
+          </div>
         )}
+
+        {status === 'processing' && (
+          <div className="absolute inset-0">
+            <div className="processing-ring"></div>
+          </div>
+        )}
+
+        {/* Círculo central */}
+        <div className={`relative z-10 w-20 h-20 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center ${status !== 'idle' ? 'pulse-ring' : ''}`}>
+          <div className="w-16 h-16 rounded-full bg-white/30 backdrop-blur-md flex items-center justify-center">
+            <div className={`w-3 h-3 rounded-full bg-white ${status === 'listening' ? 'animate-ping' : ''}`}></div>
+          </div>
+        </div>
       </button>
 
       <style jsx>{`
-        @keyframes pulse-listening {
+        @keyframes siri-wave {
+          0%, 100% {
+            transform: scaleY(0.5);
+            opacity: 0.3;
+          }
+          50% {
+            transform: scaleY(1.5);
+            opacity: 0.8;
+          }
+        }
+
+        @keyframes siri-wave-speak {
+          0%, 100% {
+            transform: scaleY(0.3);
+            opacity: 0.4;
+          }
+          50% {
+            transform: scaleY(1.8);
+            opacity: 1;
+          }
+        }
+
+        .siri-wave {
+          position: absolute;
+          width: 4px;
+          height: 60%;
+          background: rgba(255, 255, 255, 0.6);
+          border-radius: 2px;
+          animation: siri-wave 1.2s ease-in-out infinite;
+        }
+
+        .siri-wave-speak {
+          position: absolute;
+          width: 4px;
+          height: 60%;
+          background: rgba(255, 255, 255, 0.7);
+          border-radius: 2px;
+          animation: siri-wave-speak 0.6s ease-in-out infinite;
+        }
+
+        .wave-1 {
+          left: 25%;
+          animation-delay: 0s;
+        }
+
+        .wave-2 {
+          left: 37.5%;
+          animation-delay: 0.1s;
+        }
+
+        .wave-3 {
+          left: 50%;
+          animation-delay: 0.2s;
+        }
+
+        .wave-4 {
+          left: 62.5%;
+          animation-delay: 0.3s;
+        }
+
+        .wave-5 {
+          left: 75%;
+          animation-delay: 0.4s;
+        }
+
+        @keyframes processing-rotate {
+          from {
+            transform: rotate(0deg);
+          }
+          to {
+            transform: rotate(360deg);
+          }
+        }
+
+        .processing-ring {
+          position: absolute;
+          inset: 10px;
+          border: 3px solid transparent;
+          border-top-color: rgba(255, 255, 255, 0.8);
+          border-radius: 50%;
+          animation: processing-rotate 1s linear infinite;
+        }
+
+        @keyframes pulse-ring {
           0%, 100% {
             transform: scale(1);
             opacity: 1;
           }
           50% {
-            transform: scale(1.05);
-            opacity: 0.9;
-          }
-        }
-
-        @keyframes pulse-processing {
-          0%, 100% {
-            transform: scale(1) rotate(0deg);
-          }
-          50% {
-            transform: scale(1.03) rotate(180deg);
-          }
-        }
-
-        @keyframes pulse-speaking {
-          0%, 100% {
-            transform: scale(1);
-          }
-          25% {
-            transform: scale(1.05);
-          }
-          50% {
-            transform: scale(0.98);
-          }
-          75% {
-            transform: scale(1.05);
-          }
-        }
-
-        @keyframes ping-slow {
-          0% {
-            transform: scale(1);
-            opacity: 0.5;
-          }
-          100% {
-            transform: scale(1.3);
-            opacity: 0;
-          }
-        }
-
-        @keyframes ping-slower {
-          0% {
-            transform: scale(1);
-            opacity: 0.3;
-          }
-          100% {
-            transform: scale(1.5);
-            opacity: 0;
-          }
-        }
-
-        @keyframes spin-slow {
-          from {
-            transform: rotate(0deg);
-          }
-          to {
-            transform: rotate(360deg);
-          }
-        }
-
-        @keyframes spin-slower {
-          from {
-            transform: rotate(360deg);
-          }
-          to {
-            transform: rotate(0deg);
-          }
-        }
-
-        @keyframes pulse-delay {
-          0%, 100% {
-            transform: scale(1);
-            opacity: 0.3;
-          }
-          50% {
             transform: scale(1.1);
-            opacity: 0.5;
+            opacity: 0.8;
           }
         }
 
-        .animate-pulse-listening {
-          animation: pulse-listening 1.5s ease-in-out infinite;
-        }
-
-        .animate-pulse-processing {
-          animation: pulse-processing 2s ease-in-out infinite;
-        }
-
-        .animate-pulse-speaking {
-          animation: pulse-speaking 0.8s ease-in-out infinite;
-        }
-
-        .animate-ping-slow {
-          animation: ping-slow 1.5s cubic-bezier(0, 0, 0.2, 1) infinite;
-        }
-
-        .animate-ping-slower {
-          animation: ping-slower 2s cubic-bezier(0, 0, 0.2, 1) infinite;
-        }
-
-        .animate-spin-slow {
-          animation: spin-slow 3s linear infinite;
-        }
-
-        .animate-spin-slower {
-          animation: spin-slower 4s linear infinite;
-        }
-
-        .animate-pulse-delay {
-          animation: pulse-delay 1.5s ease-in-out infinite 0.3s;
+        .pulse-ring {
+          animation: pulse-ring 2s ease-in-out infinite;
         }
       `}</style>
     </>
