@@ -130,14 +130,12 @@ export function HomeView() {
         playSound('event')
         addMessage('assistant', result.response)
         setShowFeedback(true)
+        
         setTimeout(() => {
           setShowFeedback(false)
-          setAssistantStatus('idle')
-          setTimeout(() => {
-            setIsListening(true)
-            setAssistantStatus('listening')
-          }, 500)
-        }, 1500)
+          speakText(result.response);
+        }, 800)
+        
       } else if (result.type === 'conversation_saved') {
         setConversationMessages([])
         setShowSavePrompt(false)
@@ -145,24 +143,32 @@ export function HomeView() {
         setFeedbackType('note')
         playSound('note')
         setShowFeedback(true)
+        
         setTimeout(() => {
           setShowFeedback(false)
-          setAssistantStatus('idle')
-          setConversationMessages([])
-        }, 1500)
+          speakText(result.response);
+        }, 800)
+        
+      } else if (result.type === 'note_created') {
+        setFeedbackType('note')
+        playSound('note')
+        addMessage('assistant', result.response)
+        setShowFeedback(true)
+        
+        setTimeout(() => {
+          setShowFeedback(false)
+          speakText(result.response);
+        }, 800)
       } else {
         setFeedbackType('note')
         playSound('note')
-        addMessage('assistant', result.response || 'Nota guardada')
+        addMessage('assistant', result.response || 'Listo')
         setShowFeedback(true)
+        
         setTimeout(() => {
           setShowFeedback(false)
-          setAssistantStatus('idle')
-          setTimeout(() => {
-            setIsListening(true)
-            setAssistantStatus('listening')
-          }, 500)
-        }, 1500)
+          speakText(result.response || 'Listo');
+        }, 800)
       }
     } catch (error) {
       console.error('❌ Error:', error)
