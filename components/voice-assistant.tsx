@@ -51,19 +51,6 @@ export function VoiceAssistant({
     }
   }, [pressTimer])
 
-  const getStatusColor = () => {
-    switch (status) {
-      case 'listening':
-        return 'from-blue-500 to-cyan-500'
-      case 'processing':
-        return 'from-purple-500 to-pink-500'
-      case 'speaking':
-        return 'from-green-500 to-emerald-500'
-      default:
-        return 'from-purple-500 to-pink-500'
-    }
-  }
-
   return (
     <>
       <button
@@ -72,110 +59,118 @@ export function VoiceAssistant({
         onMouseUp={handleMouseUp}
         onTouchStart={handleMouseDown}
         onTouchEnd={handleMouseUp}
-        className={`relative w-32 h-32 rounded-full bg-gradient-to-br ${getStatusColor()} flex items-center justify-center shadow-2xl transition-all duration-300 overflow-hidden`}
+        className="relative w-40 h-40 rounded-full focus:outline-none"
       >
-        {/* Ondas animadas estilo Siri */}
+        {/* Fondo base */}
+        <div className={`absolute inset-0 rounded-full transition-all duration-500 ${
+          status === 'idle' ? 'bg-gradient-to-br from-purple-500/30 to-pink-500/30' :
+          status === 'listening' ? 'bg-gradient-to-br from-blue-500/40 to-cyan-500/40' :
+          status === 'processing' ? 'bg-gradient-to-br from-purple-500/40 to-pink-500/40' :
+          'bg-gradient-to-br from-green-500/40 to-emerald-500/40'
+        }`}></div>
+
+        {/* Ondas animadas */}
         {status === 'listening' && (
-          <div className="absolute inset-0 flex items-center justify-center">
-            <div className="siri-wave wave-1"></div>
-            <div className="siri-wave wave-2"></div>
-            <div className="siri-wave wave-3"></div>
-            <div className="siri-wave wave-4"></div>
-            <div className="siri-wave wave-5"></div>
-          </div>
+          <>
+            <div className="wave-ring wave-1"></div>
+            <div className="wave-ring wave-2"></div>
+            <div className="wave-ring wave-3"></div>
+          </>
         )}
 
         {status === 'speaking' && (
-          <div className="absolute inset-0 flex items-center justify-center">
-            <div className="siri-wave-speak wave-1"></div>
-            <div className="siri-wave-speak wave-2"></div>
-            <div className="siri-wave-speak wave-3"></div>
-            <div className="siri-wave-speak wave-4"></div>
-            <div className="siri-wave-speak wave-5"></div>
-          </div>
-        )}
-
-        {status === 'processing' && (
-          <div className="absolute inset-0">
-            <div className="processing-ring"></div>
-          </div>
+          <>
+            <div className="speak-ring speak-1"></div>
+            <div className="speak-ring speak-2"></div>
+            <div className="speak-ring speak-3"></div>
+          </>
         )}
 
         {/* Círculo central */}
-        <div className={`relative z-10 w-20 h-20 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center ${status !== 'idle' ? 'pulse-ring' : ''}`}>
-          <div className="w-16 h-16 rounded-full bg-white/30 backdrop-blur-md flex items-center justify-center">
-            <div className={`w-3 h-3 rounded-full bg-white ${status === 'listening' ? 'animate-ping' : ''}`}></div>
+        <div className="absolute inset-0 flex items-center justify-center">
+          <div className={`w-24 h-24 rounded-full backdrop-blur-xl transition-all duration-300 ${
+            status === 'idle' ? 'bg-white/10 scale-100' :
+            status === 'listening' ? 'bg-blue-500/20 scale-110' :
+            status === 'processing' ? 'bg-purple-500/20 scale-105 animate-pulse' :
+            'bg-green-500/20 scale-110'
+          }`}>
+            <div className="w-full h-full rounded-full flex items-center justify-center">
+              {/* Punto central */}
+              <div className={`rounded-full transition-all duration-300 ${
+                status === 'idle' ? 'w-4 h-4 bg-white/60' :
+                status === 'listening' ? 'w-5 h-5 bg-blue-400 animate-pulse' :
+                status === 'processing' ? 'w-4 h-4 bg-purple-400 animate-spin-slow' :
+                'w-5 h-5 bg-green-400'
+              }`}></div>
+            </div>
           </div>
         </div>
       </button>
 
       <style jsx>{`
-        @keyframes siri-wave {
-          0%, 100% {
-            transform: scaleY(0.5);
-            opacity: 0.3;
-          }
-          50% {
-            transform: scaleY(1.5);
+        @keyframes wave-expand {
+          0% {
+            transform: scale(0.8);
             opacity: 0.8;
           }
-        }
-
-        @keyframes siri-wave-speak {
-          0%, 100% {
-            transform: scaleY(0.3);
-            opacity: 0.4;
-          }
-          50% {
-            transform: scaleY(1.8);
-            opacity: 1;
+          100% {
+            transform: scale(1.5);
+            opacity: 0;
           }
         }
 
-        .siri-wave {
+        .wave-ring {
           position: absolute;
-          width: 4px;
-          height: 60%;
-          background: rgba(255, 255, 255, 0.6);
-          border-radius: 2px;
-          animation: siri-wave 1.2s ease-in-out infinite;
-        }
-
-        .siri-wave-speak {
-          position: absolute;
-          width: 4px;
-          height: 60%;
-          background: rgba(255, 255, 255, 0.7);
-          border-radius: 2px;
-          animation: siri-wave-speak 0.6s ease-in-out infinite;
+          inset: -20px;
+          border: 2px solid rgba(59, 130, 246, 0.5);
+          border-radius: 50%;
+          animation: wave-expand 2s ease-out infinite;
         }
 
         .wave-1 {
-          left: 25%;
           animation-delay: 0s;
         }
 
         .wave-2 {
-          left: 37.5%;
-          animation-delay: 0.1s;
+          animation-delay: 0.5s;
         }
 
         .wave-3 {
-          left: 50%;
-          animation-delay: 0.2s;
+          animation-delay: 1s;
         }
 
-        .wave-4 {
-          left: 62.5%;
+        @keyframes speak-pulse {
+          0%, 100% {
+            transform: scale(0.95);
+            opacity: 0.6;
+          }
+          50% {
+            transform: scale(1.2);
+            opacity: 0.3;
+          }
+        }
+
+        .speak-ring {
+          position: absolute;
+          inset: -10px;
+          border: 3px solid rgba(34, 197, 94, 0.4);
+          border-radius: 50%;
+          animation: speak-pulse 1.5s ease-in-out infinite;
+        }
+
+        .speak-1 {
+          animation-delay: 0s;
+        }
+
+        .speak-2 {
           animation-delay: 0.3s;
         }
 
-        .wave-5 {
-          left: 75%;
-          animation-delay: 0.4s;
+        .speak-3 {
+          animation-delay: 0.6s;
         }
 
-        @keyframes processing-rotate {
+        @keyframes spin-slow {
           from {
             transform: rotate(0deg);
           }
@@ -184,28 +179,8 @@ export function VoiceAssistant({
           }
         }
 
-        .processing-ring {
-          position: absolute;
-          inset: 10px;
-          border: 3px solid transparent;
-          border-top-color: rgba(255, 255, 255, 0.8);
-          border-radius: 50%;
-          animation: processing-rotate 1s linear infinite;
-        }
-
-        @keyframes pulse-ring {
-          0%, 100% {
-            transform: scale(1);
-            opacity: 1;
-          }
-          50% {
-            transform: scale(1.1);
-            opacity: 0.8;
-          }
-        }
-
-        .pulse-ring {
-          animation: pulse-ring 2s ease-in-out infinite;
+        .animate-spin-slow {
+          animation: spin-slow 2s linear infinite;
         }
       `}</style>
     </>
