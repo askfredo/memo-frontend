@@ -5,7 +5,6 @@ import { NotesView } from "@/components/notes-view"
 import { HomeView } from "@/components/home-view"
 import { CalendarView } from "@/components/calendar-view"
 import { BottomNavigation } from "@/components/bottom-navigation"
-import { NotificationBell } from "@/components/notification-bell"
 import { NotificationsPanel } from "@/components/notifications-panel"
 
 export type ViewType = "notes" | "home" | "calendar"
@@ -29,14 +28,13 @@ export default function MemoVozApp() {
 
   return (
     <div className="min-h-screen bg-[#202124] text-[#e8eaed] flex flex-col">
-      <header className="fixed top-0 left-0 right-0 bg-[#2d2e30] h-14 flex items-center justify-between px-4 z-40">
-        <h1 className="text-lg font-semibold text-white">MemoVoz</h1>
-        <NotificationBell onClick={() => setShowNotifications(true)} />
-      </header>
-
-      <main className="flex-1 overflow-hidden pb-20 pt-14">{renderCurrentView()}</main>
+      <main className="flex-1 overflow-hidden pb-20">{renderCurrentView()}</main>
       
-      <BottomNavigation currentView={currentView} onViewChange={setCurrentView} />
+      <BottomNavigation 
+        currentView={currentView} 
+        onViewChange={setCurrentView}
+        onNotificationClick={() => setShowNotifications(true)}
+      />
       
       <NotificationsPanel 
         isOpen={showNotifications} 
