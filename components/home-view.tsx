@@ -7,6 +7,7 @@ import { api } from "@/lib/api"
 import { StickyNote, Calendar, Camera, Save, X } from "lucide-react"
 
 interface ConversationMessage {
+  id: string
   type: 'user' | 'assistant'
   text: string
   timestamp: Date
@@ -50,11 +51,19 @@ export function HomeView() {
   const addMessage = (type: 'user' | 'assistant', text: string) => {
     if (!text || text.trim() === '') return;
     
-    setConversationMessages(prev => [...prev, {
+    const newMessage: ConversationMessage = {
+      id: Date.now().toString() + Math.random(),
       type,
       text: text.trim(),
       timestamp: new Date()
-    }])
+    }
+    
+    setConversationMessages(prev => [newMessage, ...prev])
+    
+    // Mantener solo los últimos 6 mensajes
+    setTimeout(() => {
+      setConversationMessages(prev => prev.slice(0, 6))
+    }, 100)
   }
 
   const speakText = (text: string) => {
@@ -102,7 +111,7 @@ export function HomeView() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
           message: text,
-          conversationHistory: conversationMessages,
+          conversationHistory: conversationMessages.map(m => ({ type: m.type, text: m.text, timestamp: m.timestamp })),
           useNativeVoice: false
         })
       })
@@ -272,7 +281,7 @@ export function HomeView() {
   }, [isListening])
 
   return (
-    <div className="h-full flex flex-col relative bg-gradient-to-b from-gray-900 via-gray-900 to-black">
+    <div className="h-full flex flex-col relative bg-gradient-to-b from-gray-900 via-gray-900 to-black overflow-hidden">
       <div className="text-center pt-12 pb-6">
         <h1 className="text-4xl font-light text-white mb-2 tracking-wide">MemoVoz</h1>
         <p className="text-gray-500 text-sm">Tu asistente personal</p>
@@ -305,18 +314,22 @@ export function HomeView() {
           )}
         </div>
 
+        {/* Conversación - Mensajes nuevos arriba, sin scroll */}
         {conversationMessages.length > 0 && (
-          <div className="w-full max-w-xl mt-8">
-            <div className="space-y-4 flex flex-col-reverse max-h-64 overflow-y-auto px-4">
-              {[...conversationMessages].reverse().map((msg, idx) => (
+          <div className="w-full max-w-xl mt-8 relative">
+            <div className="space-y-3 px-4">
+              {conversationMessages.slice(0, 6).map((msg, idx) => (
                 <div
-                  key={conversationMessages.length - 1 - idx}
-                  className={`fade-in ${
+                  key={msg.id}
+                  className={`message-fade-in ${
                     msg.type === 'user' ? 'text-right' : 'text-left'
                   }`}
-                  style={{ animationDelay: `${idx * 0.1}s` }}
+                  style={{ 
+                    animationDelay: `${idx * 0.05}s`,
+                    opacity: 1 - (idx * 0.15) // Fade progresivo
+                  }}
                 >
-                  <p className={`inline-block px-4 py-2 rounded-2xl text-sm ${
+                  <p className={`inline-block px-4 py-2 rounded-2xl text-sm transition-all ${
                     msg.type === 'user' 
                       ? 'bg-blue-500/20 text-blue-200' 
                       : 'bg-white/10 text-gray-200'
@@ -326,6 +339,9 @@ export function HomeView() {
                 </div>
               ))}
             </div>
+            
+            {/* Gradient fade en la parte inferior */}
+            <div className="absolute bottom-0 left-0 right-0 h-20 bg-gradient-to-t from-gray-900 to-transparent pointer-events-none"></div>
           </div>
         )}
 
@@ -400,10 +416,10 @@ export function HomeView() {
           animation: ping-scale 1.5s ease-out;
         }
 
-        @keyframes fade-in {
+        @keyframes message-fade-in {
           from {
             opacity: 0;
-            transform: translateY(10px);
+            transform: translateY(-10px);
           }
           to {
             opacity: 1;
@@ -411,9 +427,8 @@ export function HomeView() {
           }
         }
 
-        .fade-in {
-          animation: fade-in 0.3s ease-out forwards;
-          opacity: 0;
+        .message-fade-in {
+          animation: message-fade-in 0.3s ease-out forwards;
         }
 
         @keyframes bounce-in {
