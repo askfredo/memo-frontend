@@ -281,7 +281,7 @@ export function HomeView() {
   }, [isListening])
 
   return (
-    <div className="h-full flex flex-col relative bg-gradient-to-b from-gray-900 via-gray-900 to-black overflow-hidden">
+    <div className="min-h-screen flex flex-col relative bg-gradient-to-b from-gray-900 via-gray-900 to-black">
       <div className="text-center pt-12 pb-6">
         <h1 className="text-4xl font-light text-white mb-2 tracking-wide">MemoVoz</h1>
         <p className="text-gray-500 text-sm">Tu asistente personal</p>
