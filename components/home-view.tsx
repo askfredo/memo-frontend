@@ -60,7 +60,6 @@ export function HomeView() {
     
     setConversationMessages(prev => [newMessage, ...prev])
     
-    // Mantener solo los últimos 6 mensajes
     setTimeout(() => {
       setConversationMessages(prev => prev.slice(0, 6))
     }, 100)
@@ -76,12 +75,10 @@ export function HomeView() {
       utterance.pitch = 1.0;
       
       utterance.onstart = () => {
-        console.log('🔊 Hablando...');
         setAssistantStatus('speaking');
       };
       
       utterance.onend = () => {
-        console.log('✅ Terminó de hablar');
         setAssistantStatus('idle');
         setTimeout(() => {
           setIsListening(true);
@@ -89,8 +86,7 @@ export function HomeView() {
         }, 500);
       };
 
-      utterance.onerror = (e) => {
-        console.error('❌ Error TTS:', e);
+      utterance.onerror = () => {
         setAssistantStatus('idle');
       };
       
@@ -102,7 +98,6 @@ export function HomeView() {
 
   const processVoiceInput = async (text: string) => {
     try {
-      console.log('🎤 Procesando:', text);
       setAssistantStatus('processing')
       addMessage('user', text)
 
@@ -121,7 +116,6 @@ export function HomeView() {
       }
 
       const result = await response.json()
-      console.log('📦 Resultado:', result);
 
       if (result.type === 'conversation') {
         if (!result.response || result.response.trim() === '') {
@@ -180,7 +174,6 @@ export function HomeView() {
         }, 800)
       }
     } catch (error) {
-      console.error('❌ Error:', error)
       addMessage('assistant', 'Lo siento, hubo un error.')
       setAssistantStatus('idle')
       setTimeout(() => {
@@ -249,7 +242,6 @@ export function HomeView() {
 
     const SpeechRecognition = window.SpeechRecognition || (window as any).webkitSpeechRecognition
     if (!SpeechRecognition) {
-      console.error("Speech Recognition no soportado")
       setIsListening(false)
       setAssistantStatus('idle')
       return
@@ -262,13 +254,11 @@ export function HomeView() {
 
     recognition.onresult = (event: any) => {
       const transcript = event.results[0][0].transcript
-      console.log('📝 Transcrito:', transcript);
       processVoiceInput(transcript)
       setIsListening(false)
     }
 
-    recognition.onerror = (event: any) => {
-      console.error("❌ Error recognition:", event.error)
+    recognition.onerror = () => {
       setIsListening(false)
       setAssistantStatus('idle')
     }
@@ -314,7 +304,6 @@ export function HomeView() {
           )}
         </div>
 
-        {/* Conversación - Mensajes nuevos arriba, sin scroll */}
         {conversationMessages.length > 0 && (
           <div className="w-full max-w-xl mt-8 relative">
             <div className="space-y-3 px-4">
@@ -326,7 +315,7 @@ export function HomeView() {
                   }`}
                   style={{ 
                     animationDelay: `${idx * 0.05}s`,
-                    opacity: 1 - (idx * 0.15) // Fade progresivo
+                    opacity: 1 - (idx * 0.15)
                   }}
                 >
                   <p className={`inline-block px-4 py-2 rounded-2xl text-sm transition-all ${
@@ -340,7 +329,6 @@ export function HomeView() {
               ))}
             </div>
             
-            {/* Gradient fade en la parte inferior */}
             <div className="absolute bottom-0 left-0 right-0 h-20 bg-gradient-to-t from-gray-900 to-transparent pointer-events-none"></div>
           </div>
         )}
