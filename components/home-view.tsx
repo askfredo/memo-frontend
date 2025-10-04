@@ -271,8 +271,8 @@ export function HomeView() {
   }, [isListening])
 
   return (
-    <div className="min-h-screen flex flex-col relative bg-gradient-to-b from-gray-900 via-gray-900 to-black">
-      <div className="flex-1 flex flex-col items-center pt-20 px-4">
+    <div className="h-screen flex flex-col relative bg-gradient-to-b from-gray-900 via-gray-900 to-black overflow-hidden">
+      <div className="flex-1 flex flex-col items-center pt-20 px-4 overflow-y-auto overflow-x-hidden">
         <div className="relative mb-8">
           <VoiceAssistant
             onStartListening={() => {
