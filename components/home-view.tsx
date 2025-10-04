@@ -272,12 +272,7 @@ export function HomeView() {
 
   return (
     <div className="min-h-screen flex flex-col relative bg-gradient-to-b from-gray-900 via-gray-900 to-black">
-      <div className="text-center pt-12 pb-6">
-        <h1 className="text-4xl font-light text-white mb-2 tracking-wide">MemoVoz</h1>
-        <p className="text-gray-500 text-sm">Tu asistente personal</p>
-      </div>
-
-      <div className="flex-1 flex flex-col items-center justify-center px-4">
+      <div className="flex-1 flex flex-col items-center pt-20 px-4">
         <div className="relative mb-8">
           <VoiceAssistant
             onStartListening={() => {
