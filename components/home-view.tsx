@@ -153,7 +153,7 @@ export function HomeView() {
         body: JSON.stringify({ 
           message: text,
           conversationHistory: conversationMessages.map(m => ({ type: m.type, text: m.text, timestamp: m.timestamp })),
-          useNativeVoice: false // Esto hace que el backend use Gemini Live
+          useNativeVoice: true // ✅ CAMBIADO A TRUE para usar Gemini Live
         })
       })
 
