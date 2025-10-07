@@ -53,28 +53,28 @@ export function NotesView() {
 
   const allHashtags = Array.from(new Set(notes.flatMap((note) => note.hashtags)))
 
-  const handleToggleFavorite = async (noteId: string) => {
-    try {
-      const note = notes.find(n => n.id === noteId)
-      if (note) {
-        await api.updateNote(noteId, { isFavorite: !note.is_favorite })
-        setNotes((prev) => 
-          prev.map((n) => 
-            n.id === noteId ? { ...n, is_favorite: !n.is_favorite } : n
-          )
-        )
+  const handleSwipe = async (noteId: string, direction: "left" | "right") => {
+    if (direction === "left") {
+      try {
+        await api.deleteNote(noteId)
+        setNotes((prev) => prev.filter((note) => note.id !== noteId))
+      } catch (error) {
+        console.error('Error eliminando nota:', error)
       }
-    } catch (error) {
-      console.error('Error actualizando favorito:', error)
-    }
-  }
-
-  const handleDeleteNote = async (noteId: string) => {
-    try {
-      await api.deleteNote(noteId)
-      setNotes((prev) => prev.filter((note) => note.id !== noteId))
-    } catch (error) {
-      console.error('Error eliminando nota:', error)
+    } else if (direction === "right") {
+      try {
+        const note = notes.find(n => n.id === noteId)
+        if (note) {
+          await api.updateNote(noteId, { isFavorite: !note.is_favorite })
+          setNotes((prev) => 
+            prev.map((n) => 
+              n.id === noteId ? { ...n, is_favorite: !n.is_favorite } : n
+            )
+          )
+        }
+      } catch (error) {
+        console.error('Error actualizando nota:', error)
+      }
     }
   }
 
@@ -207,18 +207,16 @@ export function NotesView() {
               <ChecklistNoteCard
                 key={note.id}
                 note={note}
+                onSwipe={handleSwipe}
                 onEdit={handleEditNote}
                 onUpdateChecklist={handleUpdateChecklist}
-                onToggleFavorite={handleToggleFavorite}
-                onDelete={handleDeleteNote}
               />
             ) : (
               <NoteCard 
                 key={note.id} 
                 note={note} 
+                onSwipe={handleSwipe}
                 onEdit={handleEditNote}
-                onToggleFavorite={handleToggleFavorite}
-                onDelete={handleDeleteNote}
               />
             )
           ))}
@@ -245,12 +243,39 @@ export function NotesView() {
 
 interface NoteCardProps {
   note: Note
+  onSwipe: (noteId: string, direction: "left" | "right") => void
   onEdit: (note: Note) => void
-  onToggleFavorite: (noteId: string) => void
-  onDelete: (noteId: string) => void
 }
 
-function NoteCard({ note, onEdit, onToggleFavorite, onDelete }: NoteCardProps) {
+function NoteCard({ note, onSwipe, onEdit }: NoteCardProps) {
+  const [touchStart, setTouchStart] = useState<number | null>(null)
+  const [touchEnd, setTouchEnd] = useState<number | null>(null)
+
+  const minSwipeDistance = 50
+
+  const onTouchStart = (e: React.TouchEvent) => {
+    setTouchEnd(null)
+    setTouchStart(e.targetTouches[0].clientX)
+  }
+
+  const onTouchMove = (e: React.TouchEvent) => {
+    setTouchEnd(e.targetTouches[0].clientX)
+  }
+
+  const onTouchEnd = () => {
+    if (!touchStart || !touchEnd) return
+
+    const distance = touchStart - touchEnd
+    const isLeftSwipe = distance > minSwipeDistance
+    const isRightSwipe = distance < -minSwipeDistance
+
+    if (isLeftSwipe) {
+      onSwipe(note.id, "left")
+    } else if (isRightSwipe) {
+      onSwipe(note.id, "right")
+    }
+  }
+
   const formatDate = (dateString: string) => {
     const date = new Date(dateString)
     return date.toLocaleDateString('es-ES', { 
@@ -264,11 +289,14 @@ function NoteCard({ note, onEdit, onToggleFavorite, onDelete }: NoteCardProps) {
 
   return (
     <div
-      className={`group relative bg-gradient-to-br from-[#3c4043] to-[#2d2e30] rounded-2xl shadow-xl hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-1 overflow-hidden ${
+      className={`group relative bg-gradient-to-br from-[#3c4043] to-[#2d2e30] rounded-2xl shadow-xl hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-1 cursor-grab overflow-hidden ${
         note.is_favorite 
           ? "ring-2 ring-yellow-400 shadow-[0_0_20px_rgba(250,204,21,0.6)] hover:shadow-[0_0_30px_rgba(250,204,21,0.8)]" 
           : "ring-1 ring-blue-500/30 shadow-[0_0_15px_rgba(59,130,246,0.3)] hover:shadow-[0_0_25px_rgba(59,130,246,0.5)]"
       }`}
+      onTouchStart={onTouchStart}
+      onTouchMove={onTouchMove}
+      onTouchEnd={onTouchEnd}
     >
       {note.is_favorite && (
         <div className="absolute top-0 right-0 w-16 h-16">
@@ -278,38 +306,12 @@ function NoteCard({ note, onEdit, onToggleFavorite, onDelete }: NoteCardProps) {
         </div>
       )}
 
-      <div className="absolute top-3 right-3 flex gap-2 z-10">
-        <button
-          onClick={() => onToggleFavorite(note.id)}
-          className={`${
-            note.is_favorite 
-              ? 'bg-yellow-500 hover:bg-yellow-600' 
-              : 'bg-[#1a1b1e] hover:bg-yellow-500'
-          } p-2.5 rounded-xl transition-all shadow-lg opacity-0 group-hover:opacity-100`}
-          title={note.is_favorite ? "Quitar de favoritos" : "Agregar a favoritos"}
-        >
-          <Star 
-            size={16} 
-            className={note.is_favorite ? "text-white fill-current" : "text-gray-300"}
-          />
-        </button>
-        
-        <button
-          onClick={() => onEdit(note)}
-          className="bg-[#1a1b1e] hover:bg-blue-600 p-2.5 rounded-xl transition-all shadow-lg opacity-0 group-hover:opacity-100"
-          title="Editar nota"
-        >
-          <Edit size={16} className="text-gray-300" />
-        </button>
-        
-        <button
-          onClick={() => onDelete(note.id)}
-          className="bg-[#1a1b1e] hover:bg-red-600 p-2.5 rounded-xl transition-all shadow-lg opacity-0 group-hover:opacity-100"
-          title="Eliminar nota"
-        >
-          <Trash2 size={16} className="text-gray-300" />
-        </button>
-      </div>
+      <button
+        onClick={() => onEdit(note)}
+        className="absolute top-3 right-3 bg-[#1a1b1e] hover:bg-blue-600 p-2.5 rounded-xl transition-all opacity-0 group-hover:opacity-100 z-10 shadow-lg"
+      >
+        <Edit size={16} className="text-gray-300" />
+      </button>
 
       {note.image_data && (
         <div className="rounded-t-2xl overflow-hidden">
@@ -340,6 +342,10 @@ function NoteCard({ note, onEdit, onToggleFavorite, onDelete }: NoteCardProps) {
               {formatDate(note.created_at)}
             </span>
           </div>
+          
+          {note.is_favorite && (
+            <Star className="text-yellow-400 fill-current animate-pulse" size={18} />
+          )}
         </div>
       </div>
     </div>
