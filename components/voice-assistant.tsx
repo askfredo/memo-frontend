@@ -52,7 +52,7 @@ export function VoiceAssistant({
   }, [pressTimer])
 
   return (
-    <div className="w-full h-full flex items-center justify-center bg-black">
+    <>
       <button
         onClick={handleClick}
         onMouseDown={handleMouseDown}
@@ -148,72 +148,183 @@ export function VoiceAssistant({
 
       <style jsx>{`
         @keyframes breathe {
-          0%, 100% { transform: scale(1); opacity: 0.6; }
-          50% { transform: scale(1.05); opacity: 0.8; }
+          0%, 100% {
+            transform: scale(1);
+            opacity: 0.6;
+          }
+          50% {
+            transform: scale(1.05);
+            opacity: 0.8;
+          }
         }
-        .animate-breathe { animation: breathe 4s ease-in-out infinite; }
+
+        .animate-breathe {
+          animation: breathe 4s ease-in-out infinite;
+        }
 
         @keyframes pulse-gentle {
-          0%, 100% { opacity: 0.6; }
-          50% { opacity: 0.9; }
+          0%, 100% {
+            opacity: 0.6;
+          }
+          50% {
+            opacity: 0.9;
+          }
         }
-        .animate-pulse-gentle { animation: pulse-gentle 2s ease-in-out infinite; }
+
+        .animate-pulse-gentle {
+          animation: pulse-gentle 2s ease-in-out infinite;
+        }
 
         @keyframes ripple {
-          0% { transform: scale(0.95); opacity: 0.5; }
-          100% { transform: scale(1.4); opacity: 0; }
+          0% {
+            transform: scale(0.95);
+            opacity: 0.5;
+          }
+          100% {
+            transform: scale(1.4);
+            opacity: 0;
+          }
         }
-        .animate-ripple-1 { animation: ripple 3s ease-out infinite; }
-        .animate-ripple-2 { animation: ripple 3s ease-out infinite 1s; }
-        .animate-ripple-3 { animation: ripple 3s ease-out infinite 2s; }
+
+        .animate-ripple-1 {
+          animation: ripple 3s ease-out infinite;
+        }
+
+        .animate-ripple-2 {
+          animation: ripple 3s ease-out infinite 1s;
+        }
+
+        .animate-ripple-3 {
+          animation: ripple 3s ease-out infinite 2s;
+        }
 
         @keyframes gradient-shift {
-          0%, 100% { background-position: 0% 50%; }
-          50% { background-position: 100% 50%; }
+          0%, 100% {
+            background-position: 0% 50%;
+          }
+          50% {
+            background-position: 100% 50%;
+          }
         }
-        .animate-gradient-shift { background-size: 200% 200%; animation: gradient-shift 3s ease infinite; }
+
+        .animate-gradient-shift {
+          background-size: 200% 200%;
+          animation: gradient-shift 3s ease infinite;
+        }
 
         @keyframes gradient-rotate {
-          0% { filter: hue-rotate(0deg); }
-          100% { filter: hue-rotate(360deg); }
+          0% {
+            filter: hue-rotate(0deg);
+          }
+          100% {
+            filter: hue-rotate(360deg);
+          }
         }
-        .animate-gradient-rotate { animation: gradient-rotate 4s linear infinite; }
+
+        .animate-gradient-rotate {
+          animation: gradient-rotate 4s linear infinite;
+        }
 
         @keyframes float {
-          0%, 100% { transform: translateY(0px) scale(1); }
-          50% { transform: translateY(-4px) scale(1.02); }
+          0%, 100% {
+            transform: translateY(0px) scale(1);
+          }
+          50% {
+            transform: translateY(-4px) scale(1.02);
+          }
         }
-        .animate-float { animation: float 3s ease-in-out infinite; }
+
+        .animate-float {
+          animation: float 3s ease-in-out infinite;
+        }
 
         @keyframes wave-organic {
-          0%, 100% { transform: scaleY(0.4); opacity: 0.7; }
-          50% { transform: scaleY(1); opacity: 1; }
+          0%, 100% {
+            transform: scaleY(0.4);
+            opacity: 0.7;
+          }
+          50% {
+            transform: scaleY(1);
+            opacity: 1;
+          }
         }
-        .animate-wave-organic-1 { animation: wave-organic 1.2s ease-in-out infinite; }
-        .animate-wave-organic-2 { animation: wave-organic 1.2s ease-in-out infinite 0.15s; }
-        .animate-wave-organic-3 { animation: wave-organic 1.2s ease-in-out infinite 0.3s; }
-        .animate-wave-organic-4 { animation: wave-organic 1.2s ease-in-out infinite 0.45s; }
-        .animate-wave-organic-5 { animation: wave-organic 1.2s ease-in-out infinite 0.6s; }
+
+        .animate-wave-organic-1 {
+          animation: wave-organic 1.2s ease-in-out infinite;
+        }
+
+        .animate-wave-organic-2 {
+          animation: wave-organic 1.2s ease-in-out infinite 0.15s;
+        }
+
+        .animate-wave-organic-3 {
+          animation: wave-organic 1.2s ease-in-out infinite 0.3s;
+        }
+
+        .animate-wave-organic-4 {
+          animation: wave-organic 1.2s ease-in-out infinite 0.45s;
+        }
+
+        .animate-wave-organic-5 {
+          animation: wave-organic 1.2s ease-in-out infinite 0.6s;
+        }
 
         @keyframes speak-organic {
-          0%, 100% { transform: scaleY(0.5); opacity: 0.8; }
-          25% { transform: scaleY(1); opacity: 1; }
-          50% { transform: scaleY(0.7); opacity: 0.9; }
-          75% { transform: scaleY(0.9); opacity: 1; }
+          0%, 100% {
+            transform: scaleY(0.5);
+            opacity: 0.8;
+          }
+          25% {
+            transform: scaleY(1);
+            opacity: 1;
+          }
+          50% {
+            transform: scaleY(0.7);
+            opacity: 0.9;
+          }
+          75% {
+            transform: scaleY(0.9);
+            opacity: 1;
+          }
         }
-        .animate-speak-organic-1 { animation: speak-organic 0.8s ease-in-out infinite; }
-        .animate-speak-organic-2 { animation: speak-organic 0.8s ease-in-out infinite 0.1s; }
-        .animate-speak-organic-3 { animation: speak-organic 0.8s ease-in-out infinite 0.2s; }
-        .animate-speak-organic-4 { animation: speak-organic 0.8s ease-in-out infinite 0.3s; }
-        .animate-speak-organic-5 { animation: speak-organic 0.8s ease-in-out infinite 0.4s; }
+
+        .animate-speak-organic-1 {
+          animation: speak-organic 0.8s ease-in-out infinite;
+        }
+
+        .animate-speak-organic-2 {
+          animation: speak-organic 0.8s ease-in-out infinite 0.1s;
+        }
+
+        .animate-speak-organic-3 {
+          animation: speak-organic 0.8s ease-in-out infinite 0.2s;
+        }
+
+        .animate-speak-organic-4 {
+          animation: speak-organic 0.8s ease-in-out infinite 0.3s;
+        }
+
+        .animate-speak-organic-5 {
+          animation: speak-organic 0.8s ease-in-out infinite 0.4s;
+        }
 
         @keyframes spin-smooth {
-          0% { transform: rotate(0deg); }
-          100% { transform: rotate(360deg); }
+          0% {
+            transform: rotate(0deg);
+          }
+          100% {
+            transform: rotate(360deg);
+          }
         }
-        .animate-spin-smooth { animation: spin-smooth 2s linear infinite; }
-        .animate-spin-smooth-reverse { animation: spin-smooth 1.5s linear infinite reverse; }
+
+        .animate-spin-smooth {
+          animation: spin-smooth 2s linear infinite;
+        }
+
+        .animate-spin-smooth-reverse {
+          animation: spin-smooth 1.5s linear infinite reverse;
+        }
       `}</style>
-    </div>
+    </>
   )
 }
