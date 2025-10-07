@@ -185,7 +185,7 @@ export function VoiceAssistant({
   }, [pressTimer])
 
   return (
-    <div className={`flex flex-col items-center justify-center min-h-screen ${currentTheme.background}`}>
+    <div className="flex flex-col items-center">
       <button
         onClick={handleClick}
         onMouseDown={handleMouseDown}
