@@ -2,7 +2,7 @@
 
 import type React from "react"
 import { useState, useEffect } from "react"
-import { Star, Hash, Plus, Edit, Lock, LockOpen } from "lucide-react"
+import { Star, Hash, Plus, Edit, Lock, LockOpen, Trash2 } from "lucide-react"
 import { api } from "@/lib/api"
 import { NoteEditorModal } from "@/components/note-editor-modal"
 import { ChecklistNoteCard } from "@/components/checklist-note-card"
@@ -75,6 +75,31 @@ export function NotesView() {
       } catch (error) {
         console.error('Error actualizando nota:', error)
       }
+    }
+  }
+
+  const handleToggleFavorite = async (noteId: string) => {
+    try {
+      const note = notes.find(n => n.id === noteId)
+      if (note) {
+        await api.updateNote(noteId, { isFavorite: !note.is_favorite })
+        setNotes((prev) => 
+          prev.map((n) => 
+            n.id === noteId ? { ...n, is_favorite: !n.is_favorite } : n
+          )
+        )
+      }
+    } catch (error) {
+      console.error('Error actualizando favorito:', error)
+    }
+  }
+
+  const handleDeleteNote = async (noteId: string) => {
+    try {
+      await api.deleteNote(noteId)
+      setNotes((prev) => prev.filter((note) => note.id !== noteId))
+    } catch (error) {
+      console.error('Error eliminando nota:', error)
     }
   }
 
@@ -215,8 +240,9 @@ export function NotesView() {
               <NoteCard 
                 key={note.id} 
                 note={note} 
-                onSwipe={handleSwipe}
                 onEdit={handleEditNote}
+                onToggleFavorite={handleToggleFavorite}
+                onDelete={handleDeleteNote}
               />
             )
           ))}
@@ -243,11 +269,12 @@ export function NotesView() {
 
 interface NoteCardProps {
   note: Note
-  onSwipe: (noteId: string, direction: "left" | "right") => void
   onEdit: (note: Note) => void
+  onToggleFavorite: (noteId: string) => void
+  onDelete: (noteId: string) => void
 }
 
-function NoteCard({ note, onSwipe, onEdit }: NoteCardProps) {
+function NoteCard({ note, onEdit, onToggleFavorite, onDelete }: NoteCardProps) {
   const [touchStart, setTouchStart] = useState<number | null>(null)
   const [touchEnd, setTouchEnd] = useState<number | null>(null)
 
@@ -306,12 +333,38 @@ function NoteCard({ note, onSwipe, onEdit }: NoteCardProps) {
         </div>
       )}
 
-      <button
-        onClick={() => onEdit(note)}
-        className="absolute top-3 right-3 bg-[#1a1b1e] hover:bg-blue-600 p-2.5 rounded-xl transition-all opacity-0 group-hover:opacity-100 z-10 shadow-lg"
-      >
-        <Edit size={16} className="text-gray-300" />
-      </button>
+      <div className="absolute top-3 right-3 flex gap-2 z-10">
+        <button
+          onClick={() => onToggleFavorite(note.id)}
+          className={`${
+            note.is_favorite 
+              ? 'bg-yellow-500 hover:bg-yellow-600' 
+              : 'bg-[#1a1b1e] hover:bg-yellow-500'
+          } p-2.5 rounded-xl transition-all shadow-lg opacity-0 group-hover:opacity-100`}
+          title={note.is_favorite ? "Quitar de favoritos" : "Agregar a favoritos"}
+        >
+          <Star 
+            size={16} 
+            className={note.is_favorite ? "text-white fill-current" : "text-gray-300"}
+          />
+        </button>
+        
+        <button
+          onClick={() => onEdit(note)}
+          className="bg-[#1a1b1e] hover:bg-blue-600 p-2.5 rounded-xl transition-all shadow-lg opacity-0 group-hover:opacity-100"
+          title="Editar nota"
+        >
+          <Edit size={16} className="text-gray-300" />
+        </button>
+        
+        <button
+          onClick={() => onDelete(note.id)}
+          className="bg-[#1a1b1e] hover:bg-red-600 p-2.5 rounded-xl transition-all shadow-lg opacity-0 group-hover:opacity-100"
+          title="Eliminar nota"
+        >
+          <Trash2 size={16} className="text-gray-300" />
+        </button>
+      </div>
 
       {note.image_data && (
         <div className="rounded-t-2xl overflow-hidden">
@@ -342,10 +395,6 @@ function NoteCard({ note, onSwipe, onEdit }: NoteCardProps) {
               {formatDate(note.created_at)}
             </span>
           </div>
-          
-          {note.is_favorite && (
-            <Star className="text-yellow-400 fill-current animate-pulse" size={18} />
-          )}
         </div>
       </div>
     </div>
