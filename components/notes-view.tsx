@@ -53,31 +53,6 @@ export function NotesView() {
 
   const allHashtags = Array.from(new Set(notes.flatMap((note) => note.hashtags)))
 
-  const handleSwipe = async (noteId: string, direction: "left" | "right") => {
-    if (direction === "left") {
-      try {
-        await api.deleteNote(noteId)
-        setNotes((prev) => prev.filter((note) => note.id !== noteId))
-      } catch (error) {
-        console.error('Error eliminando nota:', error)
-      }
-    } else if (direction === "right") {
-      try {
-        const note = notes.find(n => n.id === noteId)
-        if (note) {
-          await api.updateNote(noteId, { isFavorite: !note.is_favorite })
-          setNotes((prev) => 
-            prev.map((n) => 
-              n.id === noteId ? { ...n, is_favorite: !n.is_favorite } : n
-            )
-          )
-        }
-      } catch (error) {
-        console.error('Error actualizando nota:', error)
-      }
-    }
-  }
-
   const handleToggleFavorite = async (noteId: string) => {
     try {
       const note = notes.find(n => n.id === noteId)
