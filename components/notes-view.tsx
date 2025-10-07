@@ -138,24 +138,24 @@ export function NotesView() {
   }
 
   return (
-    <div className="h-full p-4 pb-20">
-      <div className="flex items-center justify-between mb-4">
-        <h2 className="text-xl font-medium text-gray-400">Notas</h2>
-        <div className="flex gap-2">
+    <div className="h-full p-6 pb-20 bg-gradient-to-br from-[#1a1b1e] to-[#2d2e30]">
+      <div className="flex items-center justify-between mb-6">
+        <h2 className="text-2xl font-bold text-white">Mis Notas</h2>
+        <div className="flex gap-3">
           <button
             onClick={() => setShowSecretNotes(true)}
             className={`${
               secretNotesUnlocked 
-                ? 'bg-green-500 hover:bg-green-600' 
-                : 'bg-yellow-500 hover:bg-yellow-600'
-            } text-black p-2 rounded-full transition-colors`}
+                ? 'bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700' 
+                : 'bg-gradient-to-r from-yellow-500 to-amber-600 hover:from-yellow-600 hover:to-amber-700'
+            } text-white p-3 rounded-xl shadow-lg transition-all transform hover:scale-105`}
             title="Notas Secretas"
           >
             {secretNotesUnlocked ? <LockOpen size={20} /> : <Lock size={20} />}
           </button>
           <button
             onClick={handleCreateNote}
-            className="bg-blue-500 hover:bg-blue-600 text-white p-2 rounded-full transition-colors"
+            className="bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white p-3 rounded-xl shadow-lg transition-all transform hover:scale-105"
             title="Nueva Nota"
           >
             <Plus size={20} />
@@ -163,16 +163,18 @@ export function NotesView() {
         </div>
       </div>
 
-      <div className="mb-4">
-        <div className="flex items-center gap-2 mb-2">
-          <Hash size={16} className="text-gray-400" />
-          <span className="text-gray-400 text-sm">Filtrar por tema:</span>
+      <div className="mb-6 bg-[#2d2e30] rounded-2xl p-4 shadow-xl">
+        <div className="flex items-center gap-2 mb-3">
+          <Hash size={18} className="text-blue-400" />
+          <span className="text-gray-300 text-sm font-medium">Filtrar por tema</span>
         </div>
         <div className="flex flex-wrap gap-2">
           <button
             onClick={() => setSelectedHashtag(null)}
-            className={`px-3 py-1 rounded-full text-xs transition-colors ${
-              !selectedHashtag ? "bg-blue-500 text-white" : "bg-[#3c4043] text-gray-300 hover:bg-[#4a4d50]"
+            className={`px-4 py-2 rounded-xl text-sm font-medium transition-all ${
+              !selectedHashtag 
+                ? "bg-gradient-to-r from-blue-500 to-blue-600 text-white shadow-lg transform scale-105" 
+                : "bg-[#3c4043] text-gray-300 hover:bg-[#4a4d50] hover:shadow-md"
             }`}
           >
             Todos
@@ -181,8 +183,10 @@ export function NotesView() {
             <button
               key={hashtag}
               onClick={() => setSelectedHashtag(hashtag)}
-              className={`px-3 py-1 rounded-full text-xs transition-colors ${
-                selectedHashtag === hashtag ? "bg-blue-500 text-white" : "bg-[#3c4043] text-gray-300 hover:bg-[#4a4d50]"
+              className={`px-4 py-2 rounded-xl text-sm font-medium transition-all ${
+                selectedHashtag === hashtag 
+                  ? "bg-gradient-to-r from-blue-500 to-blue-600 text-white shadow-lg transform scale-105" 
+                  : "bg-[#3c4043] text-gray-300 hover:bg-[#4a4d50] hover:shadow-md"
               }`}
             >
               {hashtag}
@@ -192,12 +196,12 @@ export function NotesView() {
       </div>
 
       {sortedNotes.length === 0 ? (
-        <div className="flex flex-col items-center justify-center h-64 text-gray-500">
-          <p>No hay notas todavía</p>
+        <div className="flex flex-col items-center justify-center h-64 text-gray-500 bg-[#2d2e30] rounded-2xl shadow-xl">
+          <p className="text-lg font-medium">No hay notas todavía</p>
           <p className="text-sm mt-2">Usa el botón + para crear una</p>
         </div>
       ) : (
-        <div className="space-y-3 overflow-y-auto">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 overflow-y-auto">
           {sortedNotes.map((note) => (
             isChecklist(note) ? (
               <ChecklistNoteCard
@@ -285,22 +289,30 @@ function NoteCard({ note, onSwipe, onEdit }: NoteCardProps) {
 
   return (
     <div
-      className={`note p-4 rounded-xl shadow-lg cursor-grab bg-[#3c4043] relative transition-all ${
-        note.is_favorite ? "border-l-4 border-yellow-400" : ""
+      className={`group relative bg-gradient-to-br from-[#3c4043] to-[#2d2e30] rounded-2xl shadow-xl hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-1 cursor-grab overflow-hidden ${
+        note.is_favorite ? "ring-2 ring-yellow-400" : ""
       }`}
       onTouchStart={onTouchStart}
       onTouchMove={onTouchMove}
       onTouchEnd={onTouchEnd}
     >
+      {note.is_favorite && (
+        <div className="absolute top-0 right-0 w-16 h-16">
+          <div className="absolute transform rotate-45 bg-gradient-to-br from-yellow-400 to-yellow-500 text-white text-xs font-bold py-1 right-[-35px] top-[20px] w-[100px] text-center shadow-lg">
+            ★
+          </div>
+        </div>
+      )}
+
       <button
         onClick={() => onEdit(note)}
-        className="absolute top-2 right-2 bg-[#2d2e30] hover:bg-[#4a4d50] p-2 rounded-lg transition-colors z-10"
+        className="absolute top-3 right-3 bg-[#1a1b1e] hover:bg-blue-600 p-2.5 rounded-xl transition-all opacity-0 group-hover:opacity-100 z-10 shadow-lg"
       >
-        <Edit size={14} className="text-gray-400" />
+        <Edit size={16} className="text-gray-300" />
       </button>
 
       {note.image_data && (
-        <div className="mb-3 rounded-lg overflow-hidden">
+        <div className="rounded-t-2xl overflow-hidden">
           <img 
             src={`data:image/jpeg;base64,${note.image_data}`}
             alt="Nota"
@@ -309,23 +321,30 @@ function NoteCard({ note, onSwipe, onEdit }: NoteCardProps) {
         </div>
       )}
 
-      <p className="text-white mb-2 pr-8">
-        {note.ai_classification?.emoji || ''} {note.content}
-      </p>
-      
-      <div className="flex items-center justify-between mt-2">
-        <div className="flex items-center gap-2">
-          {mainHashtag && (
-            <span className="text-xs bg-[#2d2e30] text-blue-300 px-2 py-1 rounded-full">
-              {mainHashtag}
-            </span>
+      <div className="p-5">
+        <p className="text-white text-base leading-relaxed mb-3 pr-8">
+          {note.ai_classification?.emoji && (
+            <span className="text-2xl mr-2">{note.ai_classification.emoji}</span>
           )}
-          <span className="text-xs text-gray-500">
-            {formatDate(note.created_at)}
-          </span>
-        </div>
+          {note.content}
+        </p>
         
-        {note.is_favorite && <Star className="text-yellow-400 fill-current" size={16} />}
+        <div className="flex items-center justify-between mt-4 pt-3 border-t border-[#4a4d50]">
+          <div className="flex items-center gap-2">
+            {mainHashtag && (
+              <span className="text-xs bg-gradient-to-r from-blue-500 to-blue-600 text-white px-3 py-1.5 rounded-full font-medium shadow-md">
+                {mainHashtag}
+              </span>
+            )}
+            <span className="text-xs text-gray-400 font-medium">
+              {formatDate(note.created_at)}
+            </span>
+          </div>
+          
+          {note.is_favorite && (
+            <Star className="text-yellow-400 fill-current animate-pulse" size={18} />
+          )}
+        </div>
       </div>
     </div>
   )
