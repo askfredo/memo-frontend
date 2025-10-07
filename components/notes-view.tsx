@@ -207,9 +207,10 @@ export function NotesView() {
               <ChecklistNoteCard
                 key={note.id}
                 note={note}
-                onSwipe={handleSwipe}
                 onEdit={handleEditNote}
                 onUpdateChecklist={handleUpdateChecklist}
+                onToggleFavorite={handleToggleFavorite}
+                onDelete={handleDeleteNote}
               />
             ) : (
               <NoteCard 
@@ -250,34 +251,6 @@ interface NoteCardProps {
 }
 
 function NoteCard({ note, onEdit, onToggleFavorite, onDelete }: NoteCardProps) {
-  const [touchStart, setTouchStart] = useState<number | null>(null)
-  const [touchEnd, setTouchEnd] = useState<number | null>(null)
-
-  const minSwipeDistance = 50
-
-  const onTouchStart = (e: React.TouchEvent) => {
-    setTouchEnd(null)
-    setTouchStart(e.targetTouches[0].clientX)
-  }
-
-  const onTouchMove = (e: React.TouchEvent) => {
-    setTouchEnd(e.targetTouches[0].clientX)
-  }
-
-  const onTouchEnd = () => {
-    if (!touchStart || !touchEnd) return
-
-    const distance = touchStart - touchEnd
-    const isLeftSwipe = distance > minSwipeDistance
-    const isRightSwipe = distance < -minSwipeDistance
-
-    if (isLeftSwipe) {
-      onSwipe(note.id, "left")
-    } else if (isRightSwipe) {
-      onSwipe(note.id, "right")
-    }
-  }
-
   const formatDate = (dateString: string) => {
     const date = new Date(dateString)
     return date.toLocaleDateString('es-ES', { 
@@ -291,14 +264,11 @@ function NoteCard({ note, onEdit, onToggleFavorite, onDelete }: NoteCardProps) {
 
   return (
     <div
-      className={`group relative bg-gradient-to-br from-[#3c4043] to-[#2d2e30] rounded-2xl shadow-xl hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-1 cursor-grab overflow-hidden ${
+      className={`group relative bg-gradient-to-br from-[#3c4043] to-[#2d2e30] rounded-2xl shadow-xl hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-1 overflow-hidden ${
         note.is_favorite 
           ? "ring-2 ring-yellow-400 shadow-[0_0_20px_rgba(250,204,21,0.6)] hover:shadow-[0_0_30px_rgba(250,204,21,0.8)]" 
           : "ring-1 ring-blue-500/30 shadow-[0_0_15px_rgba(59,130,246,0.3)] hover:shadow-[0_0_25px_rgba(59,130,246,0.5)]"
       }`}
-      onTouchStart={onTouchStart}
-      onTouchMove={onTouchMove}
-      onTouchEnd={onTouchEnd}
     >
       {note.is_favorite && (
         <div className="absolute top-0 right-0 w-16 h-16">
