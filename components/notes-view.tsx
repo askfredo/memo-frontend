@@ -290,7 +290,9 @@ function NoteCard({ note, onSwipe, onEdit }: NoteCardProps) {
   return (
     <div
       className={`group relative bg-gradient-to-br from-[#3c4043] to-[#2d2e30] rounded-2xl shadow-xl hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-1 cursor-grab overflow-hidden ${
-        note.is_favorite ? "ring-2 ring-yellow-400" : ""
+        note.is_favorite 
+          ? "ring-2 ring-yellow-400 shadow-[0_0_20px_rgba(250,204,21,0.6)] hover:shadow-[0_0_30px_rgba(250,204,21,0.8)]" 
+          : "ring-1 ring-blue-500/30 shadow-[0_0_15px_rgba(59,130,246,0.3)] hover:shadow-[0_0_25px_rgba(59,130,246,0.5)]"
       }`}
       onTouchStart={onTouchStart}
       onTouchMove={onTouchMove}
