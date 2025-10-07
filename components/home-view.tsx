@@ -66,72 +66,85 @@ export function HomeView() {
     }, 100)
   }
 
-  // ✅ Función para reproducir audio de Gemini
+  // ✅ Fallback rápido con speechSynthesis para respuestas cortas
+  const speakTextFast = (text: string) => {
+    if ("speechSynthesis" in window && text.length < 100) {
+      speechSynthesis.cancel();
+      
+      const utterance = new SpeechSynthesisUtterance(text);
+      utterance.lang = "es-ES";
+      utterance.rate = 1.2; // Más rápido
+      utterance.pitch = 1.0;
+      
+      utterance.onstart = () => {
+        setAssistantStatus('speaking');
+      };
+      
+      utterance.onend = () => {
+        setAssistantStatus('idle');
+        setTimeout(() => {
+          setIsListening(true);
+          setAssistantStatus('listening');
+        }, 300);
+      };
+
+      utterance.onerror = () => {
+        setAssistantStatus('idle');
+      };
+      
+      speechSynthesis.speak(utterance);
+      return true;
+    }
+    return false;
+  };
+
+  // ✅ Función optimizada para reproducir audio de Gemini
   const playGeminiAudio = async (audioData: string, mimeType: string) => {
     try {
-      console.log('🎵 Reproduciendo audio de Gemini:', {
-        audioDataLength: audioData.length,
-        mimeType: mimeType,
-        first50Chars: audioData.substring(0, 50)
-      });
-
       // Detener audio anterior si existe
       if (currentAudioRef.current) {
         currentAudioRef.current.pause();
         currentAudioRef.current = null;
       }
 
-      // Convertir base64 a Blob
+      // Convertir base64 a Blob (optimizado)
       const binaryString = atob(audioData);
       const bytes = new Uint8Array(binaryString.length);
       for (let i = 0; i < binaryString.length; i++) {
         bytes[i] = binaryString.charCodeAt(i);
       }
       
-      console.log('✅ Audio convertido a bytes:', bytes.length);
-      
       const blob = new Blob([bytes], { type: mimeType });
-      console.log('✅ Blob creado:', blob.size, blob.type);
-      
-      // Crear URL del Blob
       const audioUrl = URL.createObjectURL(blob);
-      console.log('✅ URL creada:', audioUrl);
-      
-      // Crear elemento de audio
       const audio = new Audio(audioUrl);
       currentAudioRef.current = audio;
       
       // Configurar eventos
       audio.onplay = () => {
-        console.log('▶️ Audio comenzó a reproducirse');
         setAssistantStatus('speaking');
       };
       
       audio.onended = () => {
-        console.log('⏹️ Audio terminó');
         URL.revokeObjectURL(audioUrl);
         setAssistantStatus('idle');
         currentAudioRef.current = null;
         
-        // Reiniciar escucha después de hablar
+        // Reiniciar escucha más rápido
         setTimeout(() => {
           setIsListening(true);
           setAssistantStatus('listening');
-        }, 500);
+        }, 300); // ✅ Reducido de 500ms a 300ms
       };
 
       audio.onerror = (error) => {
         console.error('❌ Error reproduciendo audio:', error);
-        console.error('Audio error details:', audio.error);
         URL.revokeObjectURL(audioUrl);
         setAssistantStatus('idle');
         currentAudioRef.current = null;
       };
       
-      // Reproducir
-      console.log('🎬 Iniciando reproducción...');
+      // Reproducir inmediatamente
       await audio.play();
-      console.log('✅ Play() ejecutado');
       
     } catch (error) {
       console.error('❌ Error en playGeminiAudio:', error);
@@ -144,6 +157,9 @@ export function HomeView() {
       setAssistantStatus('processing')
       addMessage('user', text)
 
+      // ✅ Detectar si es pregunta compleja (necesita Gemini Live)
+      const isComplexQuestion = /qué|cuál|cuándo|dónde|cómo|por qué|explica|dime|eventos|notas/i.test(text);
+      
       const response = await fetch('https://memo-backend-production.up.railway.app/api/assistant/process', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -154,7 +170,7 @@ export function HomeView() {
             text: m.text, 
             timestamp: m.timestamp 
           })),
-          useNativeVoice: true // ✅ Usar Gemini Live
+          useNativeVoice: isComplexQuestion // ✅ Solo para preguntas complejas
         })
       })
 
@@ -163,15 +179,6 @@ export function HomeView() {
       }
 
       const result = await response.json()
-
-      // 🔍 DEBUG: Ver qué devuelve el backend
-      console.log('🎯 Respuesta del backend:', {
-        type: result.type,
-        hasAudioData: !!result.audioData,
-        audioDataLength: result.audioData?.length || 0,
-        mimeType: result.mimeType,
-        responseText: result.response
-      });
 
       // ✅ Verificar si hay audio de Gemini
       const hasGeminiAudio = result.audioData && result.mimeType;
