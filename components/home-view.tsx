@@ -69,6 +69,12 @@ export function HomeView() {
   // ✅ NUEVA FUNCIÓN: Reproduce el audio de Gemini
   const playGeminiAudio = async (audioData: string, mimeType: string) => {
     try {
+      console.log('🎵 Intentando reproducir audio:', {
+        audioDataLength: audioData.length,
+        mimeType: mimeType,
+        first50Chars: audioData.substring(0, 50)
+      });
+
       // Detener audio anterior si existe
       if (currentAudioRef.current) {
         currentAudioRef.current.pause();
@@ -81,10 +87,15 @@ export function HomeView() {
       for (let i = 0; i < binaryString.length; i++) {
         bytes[i] = binaryString.charCodeAt(i);
       }
+      
+      console.log('✅ Audio convertido a bytes:', bytes.length);
+      
       const blob = new Blob([bytes], { type: mimeType });
+      console.log('✅ Blob creado:', blob.size, blob.type);
       
       // Crear URL del Blob
       const audioUrl = URL.createObjectURL(blob);
+      console.log('✅ URL creada:', audioUrl);
       
       // Crear elemento de audio
       const audio = new Audio(audioUrl);
@@ -92,10 +103,12 @@ export function HomeView() {
       
       // Configurar eventos
       audio.onplay = () => {
+        console.log('▶️ Audio comenzó a reproducirse');
         setAssistantStatus('speaking');
       };
       
       audio.onended = () => {
+        console.log('⏹️ Audio terminó de reproducirse');
         URL.revokeObjectURL(audioUrl);
         setAssistantStatus('idle');
         currentAudioRef.current = null;
@@ -108,17 +121,20 @@ export function HomeView() {
       };
 
       audio.onerror = (error) => {
-        console.error('Error reproduciendo audio:', error);
+        console.error('❌ Error reproduciendo audio:', error);
+        console.error('Audio error details:', audio.error);
         URL.revokeObjectURL(audioUrl);
         setAssistantStatus('idle');
         currentAudioRef.current = null;
       };
       
       // Reproducir
+      console.log('🎬 Iniciando reproducción...');
       await audio.play();
+      console.log('✅ Play() ejecutado correctamente');
       
     } catch (error) {
-      console.error('Error en playGeminiAudio:', error);
+      console.error('❌ Error en playGeminiAudio:', error);
       setAssistantStatus('idle');
     }
   };
@@ -146,6 +162,15 @@ export function HomeView() {
       }
 
       const result = await response.json()
+
+      // 🔍 DEBUG: Ver qué está devolviendo el backend
+      console.log('🎯 Respuesta del backend:', {
+        type: result.type,
+        hasAudioData: !!result.audioData,
+        audioDataLength: result.audioData?.length || 0,
+        mimeType: result.mimeType,
+        responseText: result.response
+      });
 
       // ✅ NUEVO: Verificar si hay audio de Gemini
       const hasGeminiAudio = result.audioData && result.mimeType;
