@@ -185,7 +185,7 @@ export function VoiceAssistant({
   }, [pressTimer])
 
   return (
-    <div className="flex flex-col items-center">
+    <div className="flex flex-col items-center h-full">
       <button
         onClick={handleClick}
         onMouseDown={handleMouseDown}
@@ -280,16 +280,13 @@ export function VoiceAssistant({
         </div>
       </button>
 
-      <div className="mt-8 relative h-12 flex items-start justify-center overflow-hidden">
-        <div className="relative">
-          <p className={`${currentTheme.text} text-lg font-medium tracking-wide transition-all duration-500 text-center`}>
-            {status === "idle" && "Toca para comenzar"}
-            {status === "listening" && "Te escucho..."}
-            {status === "processing" && "Procesando..."}
-            {status === "speaking" && "Respondiendo..."}
-          </p>
-          <div className={`absolute inset-x-0 -bottom-2 h-8 bg-gradient-to-b ${currentTheme.textGradient} opacity-60 blur-sm pointer-events-none`}></div>
-        </div>
+      <div className="mt-4 relative flex items-start justify-center">
+        <p className={`${currentTheme.text} text-lg font-medium tracking-wide transition-all duration-500 text-center`}>
+          {status === "idle" && "Toca para comenzar"}
+          {status === "listening" && "Te escucho..."}
+          {status === "processing" && "Procesando..."}
+          {status === "speaking" && "Respondiendo..."}
+        </p>
       </div>
 
       <style jsx>{`
