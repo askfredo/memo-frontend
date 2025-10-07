@@ -2,7 +2,7 @@
 
 import type React from "react"
 import { useState, useEffect } from "react"
-import { Star, Hash, Plus, Edit, Lock, LockOpen, Trash2 } from "lucide-react"
+import { Star, Hash, Plus, Edit, Lock, LockOpen } from "lucide-react"
 import { api } from "@/lib/api"
 import { NoteEditorModal } from "@/components/note-editor-modal"
 import { ChecklistNoteCard } from "@/components/checklist-note-card"
@@ -74,33 +74,6 @@ export function NotesView() {
         }
       } catch (error) {
         console.error('Error actualizando nota:', error)
-      }
-    }
-  }
-
-  const handleToggleFavorite = async (noteId: string) => {
-    try {
-      const note = notes.find(n => n.id === noteId)
-      if (note) {
-        await api.updateNote(noteId, { isFavorite: !note.is_favorite })
-        setNotes((prev) => 
-          prev.map((n) => 
-            n.id === noteId ? { ...n, is_favorite: !n.is_favorite } : n
-          )
-        )
-      }
-    } catch (error) {
-      console.error('Error actualizando favorito:', error)
-    }
-  }
-
-  const handleDeleteNote = async (noteId: string) => {
-    if (confirm('¿Estás seguro de que quieres eliminar esta nota?')) {
-      try {
-        await api.deleteNote(noteId)
-        setNotes((prev) => prev.filter((note) => note.id !== noteId))
-      } catch (error) {
-        console.error('Error eliminando nota:', error)
       }
     }
   }
@@ -242,8 +215,7 @@ export function NotesView() {
               <NoteCard 
                 key={note.id} 
                 note={note} 
-                onToggleFavorite={handleToggleFavorite}
-                onDelete={handleDeleteNote}
+                onSwipe={handleSwipe}
                 onEdit={handleEditNote}
               />
             )
@@ -271,12 +243,11 @@ export function NotesView() {
 
 interface NoteCardProps {
   note: Note
-  onToggleFavorite: (noteId: string) => void
-  onDelete: (noteId: string) => void
+  onSwipe: (noteId: string, direction: "left" | "right") => void
   onEdit: (note: Note) => void
 }
 
-function NoteCard({ note, onToggleFavorite, onDelete, onEdit }: NoteCardProps) {
+function NoteCard({ note, onSwipe, onEdit }: NoteCardProps) {
   const [touchStart, setTouchStart] = useState<number | null>(null)
   const [touchEnd, setTouchEnd] = useState<number | null>(null)
 
@@ -318,11 +289,14 @@ function NoteCard({ note, onToggleFavorite, onDelete, onEdit }: NoteCardProps) {
 
   return (
     <div
-      className={`group relative bg-gradient-to-br from-[#3c4043] to-[#2d2e30] rounded-2xl shadow-xl hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-1 overflow-hidden ${
+      className={`group relative bg-gradient-to-br from-[#3c4043] to-[#2d2e30] rounded-2xl shadow-xl hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-1 cursor-grab overflow-hidden ${
         note.is_favorite 
           ? "ring-2 ring-yellow-400 shadow-[0_0_20px_rgba(250,204,21,0.6)] hover:shadow-[0_0_30px_rgba(250,204,21,0.8)]" 
           : "ring-1 ring-blue-500/30 shadow-[0_0_15px_rgba(59,130,246,0.3)] hover:shadow-[0_0_25px_rgba(59,130,246,0.5)]"
       }`}
+      onTouchStart={onTouchStart}
+      onTouchMove={onTouchMove}
+      onTouchEnd={onTouchEnd}
     >
       {note.is_favorite && (
         <div className="absolute top-0 right-0 w-16 h-16">
@@ -332,40 +306,12 @@ function NoteCard({ note, onToggleFavorite, onDelete, onEdit }: NoteCardProps) {
         </div>
       )}
 
-      <div className="absolute top-3 left-3 right-3 flex justify-between items-start z-20">
-        <button
-          onClick={() => onToggleFavorite(note.id)}
-          className={`p-2 rounded-lg transition-all shadow-lg transform hover:scale-110 ${
-            note.is_favorite
-              ? 'bg-gradient-to-r from-yellow-500 to-yellow-600 hover:from-yellow-600 hover:to-yellow-700'
-              : 'bg-[#1a1b1e]/80 hover:bg-yellow-500 backdrop-blur-sm'
-          }`}
-          title={note.is_favorite ? "Quitar de favoritos" : "Añadir a favoritos"}
-        >
-          <Star 
-            size={18} 
-            className={note.is_favorite ? "text-white fill-current" : "text-gray-300"} 
-          />
-        </button>
-
-        <div className="flex gap-2">
-          <button
-            onClick={() => onEdit(note)}
-            className="bg-[#1a1b1e]/80 hover:bg-blue-600 p-2 rounded-lg transition-all shadow-lg transform hover:scale-110 backdrop-blur-sm"
-            title="Editar nota"
-          >
-            <Edit size={18} className="text-gray-300 hover:text-white" />
-          </button>
-
-          <button
-            onClick={() => onDelete(note.id)}
-            className="bg-[#1a1b1e]/80 hover:bg-red-600 p-2 rounded-lg transition-all shadow-lg transform hover:scale-110 backdrop-blur-sm"
-            title="Eliminar nota"
-          >
-            <Trash2 size={18} className="text-gray-300 hover:text-white" />
-          </button>
-        </div>
-      </div>
+      <button
+        onClick={() => onEdit(note)}
+        className="absolute top-3 right-3 bg-[#1a1b1e] hover:bg-blue-600 p-2.5 rounded-xl transition-all opacity-0 group-hover:opacity-100 z-10 shadow-lg"
+      >
+        <Edit size={16} className="text-gray-300" />
+      </button>
 
       {note.image_data && (
         <div className="rounded-t-2xl overflow-hidden">
