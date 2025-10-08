@@ -20,7 +20,6 @@ export function HomeView() {
   const [feedbackType, setFeedbackType] = useState<'note' | 'calendar'>('note')
   const [isProcessingImage, setIsProcessingImage] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
-  const currentAudioRef = useRef<HTMLAudioElement | null>(null)
   
   const [conversationMessages, setConversationMessages] = useState<ConversationMessage[]>([])
   const [showSavePrompt, setShowSavePrompt] = useState(false)
@@ -66,14 +65,13 @@ export function HomeView() {
     }, 100)
   }
 
-  // ✅ Fallback rápido con speechSynthesis para respuestas cortas
-  const speakTextFast = (text: string) => {
-    if ("speechSynthesis" in window && text.length < 100) {
+  const speakText = (text: string) => {
+    if ("speechSynthesis" in window) {
       speechSynthesis.cancel();
       
       const utterance = new SpeechSynthesisUtterance(text);
       utterance.lang = "es-ES";
-      utterance.rate = 1.2; // Más rápido
+      utterance.rate = 1.1;
       utterance.pitch = 1.0;
       
       utterance.onstart = () => {
@@ -85,7 +83,7 @@ export function HomeView() {
         setTimeout(() => {
           setIsListening(true);
           setAssistantStatus('listening');
-        }, 300);
+        }, 500);
       };
 
       utterance.onerror = () => {
@@ -93,61 +91,7 @@ export function HomeView() {
       };
       
       speechSynthesis.speak(utterance);
-      return true;
-    }
-    return false;
-  };
-
-  // ✅ Función optimizada para reproducir audio de Gemini
-  const playGeminiAudio = async (audioData: string, mimeType: string) => {
-    try {
-      // Detener audio anterior si existe
-      if (currentAudioRef.current) {
-        currentAudioRef.current.pause();
-        currentAudioRef.current = null;
-      }
-
-      // Convertir base64 a Blob (optimizado)
-      const binaryString = atob(audioData);
-      const bytes = new Uint8Array(binaryString.length);
-      for (let i = 0; i < binaryString.length; i++) {
-        bytes[i] = binaryString.charCodeAt(i);
-      }
-      
-      const blob = new Blob([bytes], { type: mimeType });
-      const audioUrl = URL.createObjectURL(blob);
-      const audio = new Audio(audioUrl);
-      currentAudioRef.current = audio;
-      
-      // Configurar eventos
-      audio.onplay = () => {
-        setAssistantStatus('speaking');
-      };
-      
-      audio.onended = () => {
-        URL.revokeObjectURL(audioUrl);
-        setAssistantStatus('idle');
-        currentAudioRef.current = null;
-        
-        // Reiniciar escucha más rápido
-        setTimeout(() => {
-          setIsListening(true);
-          setAssistantStatus('listening');
-        }, 300); // ✅ Reducido de 500ms a 300ms
-      };
-
-      audio.onerror = (error) => {
-        console.error('❌ Error reproduciendo audio:', error);
-        URL.revokeObjectURL(audioUrl);
-        setAssistantStatus('idle');
-        currentAudioRef.current = null;
-      };
-      
-      // Reproducir inmediatamente
-      await audio.play();
-      
-    } catch (error) {
-      console.error('❌ Error en playGeminiAudio:', error);
+    } else {
       setAssistantStatus('idle');
     }
   };
@@ -157,20 +101,13 @@ export function HomeView() {
       setAssistantStatus('processing')
       addMessage('user', text)
 
-      // ✅ Detectar si es pregunta compleja (necesita Gemini Live)
-      const isComplexQuestion = /qué|cuál|cuándo|dónde|cómo|por qué|explica|dime|eventos|notas/i.test(text);
-      
       const response = await fetch('https://memo-backend-production.up.railway.app/api/assistant/process', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
           message: text,
-          conversationHistory: conversationMessages.map(m => ({ 
-            type: m.type, 
-            text: m.text, 
-            timestamp: m.timestamp 
-          })),
-          useNativeVoice: isComplexQuestion // ✅ Solo para preguntas complejas
+          conversationHistory: conversationMessages.map(m => ({ type: m.type, text: m.text, timestamp: m.timestamp })),
+          useNativeVoice: false
         })
       })
 
@@ -180,23 +117,13 @@ export function HomeView() {
 
       const result = await response.json()
 
-      // ✅ Verificar si hay audio de Gemini
-      const hasGeminiAudio = result.audioData && result.mimeType;
-
       if (result.type === 'conversation') {
         if (!result.response || result.response.trim() === '') {
-          throw new Error('Respuesta vacía del servidor');
+          throw new Error('Respuesta vacÃ­a del servidor');
         }
 
         addMessage('assistant', result.response)
-        
-        // ✅ Reproducir audio de Gemini
-        if (hasGeminiAudio) {
-          await playGeminiAudio(result.audioData, result.mimeType);
-        } else {
-          console.warn('⚠️ No hay audio de Gemini, backend podría no estar usando Gemini Live');
-          setAssistantStatus('idle');
-        }
+        speakText(result.response);
 
         if (result.shouldOfferSave) {
           setTimeout(() => setShowSavePrompt(true), 2000);
@@ -207,13 +134,9 @@ export function HomeView() {
         addMessage('assistant', result.response)
         setShowFeedback(true)
         
-        setTimeout(async () => {
+        setTimeout(() => {
           setShowFeedback(false)
-          if (hasGeminiAudio) {
-            await playGeminiAudio(result.audioData, result.mimeType);
-          } else {
-            setAssistantStatus('idle');
-          }
+          speakText(result.response);
         }, 800)
         
       } else if (result.type === 'conversation_saved') {
@@ -224,13 +147,9 @@ export function HomeView() {
         playSound('note')
         setShowFeedback(true)
         
-        setTimeout(async () => {
+        setTimeout(() => {
           setShowFeedback(false)
-          if (hasGeminiAudio) {
-            await playGeminiAudio(result.audioData, result.mimeType);
-          } else {
-            setAssistantStatus('idle');
-          }
+          speakText(result.response);
         }, 800)
         
       } else if (result.type === 'note_created') {
@@ -239,13 +158,9 @@ export function HomeView() {
         addMessage('assistant', result.response)
         setShowFeedback(true)
         
-        setTimeout(async () => {
+        setTimeout(() => {
           setShowFeedback(false)
-          if (hasGeminiAudio) {
-            await playGeminiAudio(result.audioData, result.mimeType);
-          } else {
-            setAssistantStatus('idle');
-          }
+          speakText(result.response);
         }, 800)
       } else {
         setFeedbackType('note')
@@ -253,17 +168,12 @@ export function HomeView() {
         addMessage('assistant', result.response || 'Listo')
         setShowFeedback(true)
         
-        setTimeout(async () => {
+        setTimeout(() => {
           setShowFeedback(false)
-          if (hasGeminiAudio) {
-            await playGeminiAudio(result.audioData, result.mimeType);
-          } else {
-            setAssistantStatus('idle');
-          }
+          speakText(result.response || 'Listo');
         }, 800)
       }
     } catch (error) {
-      console.error('❌ Error en processVoiceInput:', error)
       addMessage('assistant', 'Lo siento, hubo un error.')
       setAssistantStatus('idle')
       setTimeout(() => {
@@ -285,10 +195,10 @@ export function HomeView() {
       setConversationMessages([])
       setShowSavePrompt(false)
       
-      addMessage('assistant', 'Conversación guardada')
+      addMessage('assistant', 'ConversaciÃ³n guardada')
       setTimeout(() => setConversationMessages([]), 2000)
     } catch (error) {
-      console.error('Error guardando conversación:', error)
+      console.error('Error guardando conversaciÃ³n:', error)
     }
   }
 
@@ -359,16 +269,6 @@ export function HomeView() {
       recognition.stop()
     }
   }, [isListening])
-
-  // Cleanup: Detener audio al desmontar
-  useEffect(() => {
-    return () => {
-      if (currentAudioRef.current) {
-        currentAudioRef.current.pause();
-        currentAudioRef.current = null;
-      }
-    };
-  }, []);
 
   return (
     <div className="h-screen flex flex-col relative bg-gradient-to-b from-gray-900 via-gray-900 to-black overflow-hidden">
